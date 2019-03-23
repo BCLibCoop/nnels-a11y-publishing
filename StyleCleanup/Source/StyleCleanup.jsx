@@ -31,6 +31,7 @@
 
 #include "CONFIG.jsx"
 #include "../../SharedCode/LOG.jsx"
+#include "../../SharedCode/UTILS.jsx"
 #include "STYC.jsx"
 #include "SETUP.jsx"
 
