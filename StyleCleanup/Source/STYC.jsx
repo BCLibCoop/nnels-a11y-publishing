@@ -655,7 +655,7 @@ STYC.storyParagraphCleanup = function(io_context, in_paragraph) {
             io_context.paragraphStyleCounter++;
 
             var properties = {};
-            properties.name = "ArtificialStyle_" + io_context.paragraphStyleCounter;
+            properties.name = ARTIFICIAL_PARA_STYLE_NAME_PREFIX + io_context.paragraphStyleCounter;
             properties.basedOn = in_paragraph.appliedParagraphStyle;
             for (var attr in ATTRIBUTES_FOR_STYLE_COMPARISONS.ParagraphStyle) {
                 if (ATTRIBUTES_FOR_STYLE_COMPARISONS.ParagraphStyle[attr]) {
@@ -836,7 +836,7 @@ STYC.storyTextStyleRangeCleanup = function(io_context, in_textStyleRange) {
             io_context.characterStyleCounter++;
 
             var properties = {};
-            properties.name = "ArtificialStyle_" + io_context.characterStyleCounter;
+            properties.name = ARTIFICIAL_CHAR_STYLE_NAME_PREFIX + io_context.characterStyleCounter;
             properties.basedOn = in_textStyleRange.appliedCharacterStyle;
             for (var attr in ATTRIBUTES_FOR_STYLE_COMPARISONS.TextStyleRange) {
                 if (ATTRIBUTES_FOR_STYLE_COMPARISONS.TextStyleRange[attr]) {

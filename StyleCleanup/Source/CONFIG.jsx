@@ -38,6 +38,9 @@ var LOG_ENTRY_EXIT   = 0;
 
 var WRITE_STYLE_REPORT = 1;
 
+var ARTIFICIAL_PARA_STYLE_NAME_PREFIX = "ArtificialParaStyle_";
+var ARTIFICIAL_CHAR_STYLE_NAME_PREFIX = "ArtificialCharStyle_";
+
 // Flags all attributes to consider when comparing styles or style components
 //
 // If two styles are identical for these attributes, they will be 
