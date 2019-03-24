@@ -5,10 +5,16 @@
 export cmdScriptDir=`dirname "$0"`
 cd "$cmdScriptDir"
 export cmdScriptDir=`pwd`
+
 cd ..
 export estkScriptDir=`pwd`
 
-cat > StyleCleanup.jsx << EOF
+export releaseVersionDir="$estkScriptDir/../ReleaseVersions"
+if [ ! -e "$releaseVersionDir" ]; then
+  mkdir "$releaseVersionDir"
+fi
+
+cat > "$releaseVersionDir/StyleCleanup.jsx" << EOF
 // **** WARNING ****
 //
 // This is a release version of the StyleCleanup.jsx script
@@ -23,4 +29,6 @@ cat > StyleCleanup.jsx << EOF
 // *****************
 EOF
 
-cpp -w -C -E -P Source/StyleCleanup.jsx >> StyleCleanup.jsx 2>/dev/null
+sed -E "s/CONFIG_debug\.jsx/CONFIG\.jsx/" < Source/StyleCleanup.jsx > Source/StyleCleanup_makeReleaseVersion.tmp
+cpp -w -C -E -P Source/StyleCleanup_makeReleaseVersion.tmp >> "$releaseVersionDir/StyleCleanup.jsx" 2>/dev/null
+rm Source/StyleCleanup_makeReleaseVersion.tmp

@@ -29,7 +29,8 @@
 
 #targetengine "ca.nnels.indesignscripts.stylecleanup"
 
-#include "CONFIG.jsx"
+// The makeReleaseVersion.command script will replace this to "CONFIG.jsx" instead of "CONFIG_debug.jsx"
+#include "CONFIG_debug.jsx"
 #include "../../SharedCode/LOG.jsx"
 #include "../../SharedCode/UTILS.jsx"
 #include "STYC.jsx"

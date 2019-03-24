@@ -3,12 +3,12 @@
 // Set DEBUG to 1 to enable debugging facilities embedded in this script
 // Set to 0 to disable
 
-var DEBUG              = 0;
+var DEBUG              = 1;
 
 // Set LOG_TO_CONSOLE to 1 to enable logging to ExtendScript Toolkit 
 // JavaScript Console window. Set to 0 to disable
 
-var LOG_TO_CONSOLE     = 0;
+var LOG_TO_CONSOLE     = 1;
 
 // Set LOG_LEVEL to a value: 0 to 4. The higher the value, the more extensive
 // the log output will be
@@ -19,7 +19,7 @@ var LOG_TO_CONSOLE     = 0;
 // 3 = LOG_NOTE
 // 4 = LOG_TRACE
 
-var LOG_LEVEL          = 0; 
+var LOG_LEVEL          = 3; 
 
 // Set FILE_PATH_LOG to either double-quoted file path or undefined. Examples:
 //
