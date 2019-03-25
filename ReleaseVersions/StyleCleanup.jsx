@@ -1769,11 +1769,12 @@ STYC.storyParagraphCleanup = function(io_context, in_paragraph) {
                 break;
             }
 
+            success = true;
+
             if (! in_paragraph.textHasOverrides(StyleType.PARAGRAPH_STYLE_TYPE, false)) {
                 break;
             }
 
-            success = true;
             var hasRelevantDifferences = false;
             for (var attr in ATTRIBUTES_FOR_STYLE_COMPARISONS.ParagraphStyle) {
                 if (ATTRIBUTES_FOR_STYLE_COMPARISONS.ParagraphStyle[attr]) {
