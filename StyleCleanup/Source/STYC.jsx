@@ -467,10 +467,10 @@ STYC.inDesignElementHash = function(io_context, in_element) {
                 break;
             }
 
-            //if (in_element instanceof Enumerator) {
-                //retVal = wrapHash("E:" + in_element.toString());
-                //break;
-            //}
+            if (in_element instanceof Enumerator) {
+                retVal = wrapHash("E:" + (in_element + 0).toString(16));
+                break;
+            }
 
             if ("id" in in_element) {
                 if (! io_context.hashCache) {
