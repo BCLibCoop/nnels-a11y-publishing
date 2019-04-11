@@ -642,8 +642,8 @@ STYC.storyParagraphCleanup = function(io_context, in_paragraph) {
                 // Paragraph has manual overrides, but they are irrelevant for our purposes
                 LOG.logNote("STYC.storyParagraphCleanup: clearing in_paragraph overrides");
                 STYC.appendLineToReport(io_context, 
-                    "Cleared manual in_paragraph style overrides on in_paragraph:\n" +
-                        UTILS.shortenedString(in_paragraph.contents, 100));
+                    "Cleared manual paragraph style overrides on paragraph with text:\n" +
+                        '"' + UTILS.shortenedString(in_paragraph.contents, 100)) + '"';
                 break;
             }
         
