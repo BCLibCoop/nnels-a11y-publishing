@@ -616,6 +616,12 @@ STYC.storyParagraphCleanup = function(io_context, in_paragraph) {
                 break;
             }
 
+            var doc = io_context.doc;
+            if (! (doc instanceof Document)) {
+                LOG.logError("STYC.storyParagraphCleanup: no doc");
+                break;
+            }
+
             success = true;
 
             if (! in_paragraph.textHasOverrides(StyleType.PARAGRAPH_STYLE_TYPE, false)) {
@@ -638,15 +644,20 @@ STYC.storyParagraphCleanup = function(io_context, in_paragraph) {
                 STYC.appendLineToReport(io_context, 
                     "Cleared manual in_paragraph style overrides on in_paragraph:\n" +
                         UTILS.shortenedString(in_paragraph.contents, 100));
-                in_paragraph.clearOverrides(OverrideType.PARAGRAPH_ONLY);
                 break;
             }
+        
+            if (! io_context.paragraphCleanupBatch) {
+                io_context.paragraphCleanupBatch = [];
+            }            
 
             var newParagraphStyleHash = STYC.inDesignElementHash(io_context, in_paragraph);            
             if (io_context.artificialParagraphStylesByHashString && io_context.artificialParagraphStylesByHashString[newParagraphStyleHash.string]) {
                 var reusedArificialParagraphStyle = io_context.artificialParagraphStylesByHashString[newParagraphStyleHash.string];
-                in_paragraph.applyParagraphStyle(reusedArificialParagraphStyle, false);
-                in_paragraph.clearOverrides(OverrideType.PARAGRAPH_ONLY);
+                io_context.paragraphCleanupBatch.push({
+                    paragraph: in_paragraph,
+                    paraStyle: reusedArificialParagraphStyle
+                });
                 break;
             }
 
@@ -655,8 +666,22 @@ STYC.storyParagraphCleanup = function(io_context, in_paragraph) {
             }
             io_context.paragraphStyleCounter++;
 
+            var paraStyle;
+            var name = ARTIFICIAL_PARA_STYLE_NAME_PREFIX + io_context.paragraphStyleCounter;
+            do {
+                paraStyle = doc.paragraphStyles.itemByName(name);
+                if (paraStyle && ! paraStyle.isValid) {
+                    paraStyle = null;
+                }
+                if (paraStyle) {
+                    io_context.paragraphStyleCounter++;
+                    name = ARTIFICIAL_PARA_STYLE_NAME_PREFIX + io_context.paragraphStyleCounter;
+                }
+            }
+            while (paraStyle);
+
             var properties = {};
-            properties.name = ARTIFICIAL_PARA_STYLE_NAME_PREFIX + io_context.paragraphStyleCounter;
+            properties.name = name;
             properties.basedOn = in_paragraph.appliedParagraphStyle;
             for (var attr in ATTRIBUTES_FOR_STYLE_COMPARISONS.ParagraphStyle) {
                 if (ATTRIBUTES_FOR_STYLE_COMPARISONS.ParagraphStyle[attr]) {
@@ -666,12 +691,15 @@ STYC.storyParagraphCleanup = function(io_context, in_paragraph) {
                 }
             }
 
-            var newArtificialParagraphStyle = io_context.doc.paragraphStyles.add(properties);
+            var newArtificialParagraphStyle = doc.paragraphStyles.add(properties);
 
             STYC.addToParagraphStyleLookup(io_context, newArtificialParagraphStyle, true);
 
-            in_paragraph.applyParagraphStyle(newArtificialParagraphStyle, false);
-            in_paragraph.clearOverrides(OverrideType.PARAGRAPH_ONLY);
+            io_context.paragraphCleanupBatch.push({
+                paragraph: in_paragraph,
+                paraStyle: newArtificialParagraphStyle
+            });
+
         }
         catch (err) {
             LOG.logError("STYC.storyParagraphCleanup: throws " + err);
@@ -746,8 +774,35 @@ STYC.storyStyleCleanup = function(io_context, in_story) {
 
             success = true;
 
+            io_context.paragraphCleanupBatch = undefined;            
+            io_context.textStyleRangeCleanupBatch = undefined;            
+
             success = STYC.storyParagraphsCleanup(io_context, in_story) && success;
             success = STYC.storyTextStyleRangesCleanup(io_context, in_story) && success;
+
+            in_story.clearOverrides(OverrideType.ALL);
+
+            if (io_context.paragraphCleanupBatch) {
+                for (var idx = 0; idx < io_context.paragraphCleanupBatch.length; idx++) {
+                    var entry = io_context.paragraphCleanupBatch[idx];
+                    var paragraph = entry.paragraph;
+                    var paraStyle = entry.paraStyle;
+                    paragraph.applyParagraphStyle(paraStyle, false);                    
+                }                
+                io_context.paragraphCleanupBatch = undefined;            
+            }
+
+            if (io_context.textStyleRangeCleanupBatch) {
+                for (var idx = 0; idx < io_context.textStyleRangeCleanupBatch.length; idx++) {
+                    var entry = io_context.textStyleRangeCleanupBatch[idx];
+                    var startIdx = entry.startIdx;
+                    var endIdx = entry.endIdx;
+                    var textStyleRange = in_story.characters.itemByRange(startIdx, endIdx);
+                    var charStyle = entry.charStyle;
+                    textStyleRange.applyCharacterStyle(charStyle, false);
+                }
+                io_context.textStyleRangeCleanupBatch = undefined;            
+            }
     
         }
         catch (err) {
@@ -786,6 +841,12 @@ STYC.storyTextStyleRangeCleanup = function(io_context, in_textStyleRange) {
                 break;
             }
 
+            var doc = io_context.doc;
+            if (! (doc instanceof Document)) {
+                LOG.logError("STYC.storyTextStyleRangeCleanup: no doc");
+                break;
+            }
+
             success = true;
 
             if (! in_textStyleRange.textHasOverrides(StyleType.CHARACTER_STYLE_TYPE, false)) {
@@ -798,7 +859,7 @@ STYC.storyTextStyleRangeCleanup = function(io_context, in_textStyleRange) {
                     var paraStyleAttrVal = in_textStyleRange.appliedParagraphStyle[attr];
                     var charStyleAttrVal = in_textStyleRange.appliedCharacterStyle[attr];
                     var effectiveStyleAttrVal = paraStyleAttrVal;
-                    if (charStyleAttrVal && charStyleAttrVal != NothingEnum.NOTHING) {
+                    if (charStyleAttrVal && charStyleAttrVal != NothingEnum.NOTHING && charStyleAttrVal != "") {
                         effectiveStyleAttrVal = charStyleAttrVal;
                     }
                     if (in_textStyleRange[attr] != effectiveStyleAttrVal) {
@@ -814,8 +875,11 @@ STYC.storyTextStyleRangeCleanup = function(io_context, in_textStyleRange) {
                 STYC.appendLineToReport(io_context, 
                     "Cleared manual character style overrides on text range:\n" +
                         UTILS.shortenedString(in_textStyleRange.contents, 100));
-                in_textStyleRange.clearOverrides(OverrideType.CHARACTER_ONLY);
                 break;
+            }
+
+            if (! io_context.textStyleRangeCleanupBatch) {
+                io_context.textStyleRangeCleanupBatch = [];
             }
 
             var definingTextStyleRangeHash = STYC.inDesignElementHash(io_context, in_textStyleRange);
@@ -826,8 +890,13 @@ STYC.storyTextStyleRangeCleanup = function(io_context, in_textStyleRange) {
                 io_context.artificialCharacterStylesByDefiningTextStyleRangeHashString[definingTextStyleRangeHash.string]
             ) {
                 var reusedArtificialCharacterStyle = io_context.artificialCharacterStylesByDefiningTextStyleRangeHashString[definingTextStyleRangeHash.string];
-                in_textStyleRange.applyCharacterStyle(reusedArtificialCharacterStyle, false);
-                in_textStyleRange.clearOverrides(OverrideType.CHARACTER_ONLY);
+                var startIdx = in_textStyleRange.characters.firstItem().index;
+                var endIdx = startIdx + in_textStyleRange.characters.length - 1;
+                io_context.textStyleRangeCleanupBatch.push({
+                    startIdx: startIdx,
+                    endIdx: endIdx,
+                    charStyle: reusedArtificialCharacterStyle
+                });
                 break;
             }
 
@@ -836,8 +905,22 @@ STYC.storyTextStyleRangeCleanup = function(io_context, in_textStyleRange) {
             }
             io_context.characterStyleCounter++;
 
+            var charStyle;
+            var name = ARTIFICIAL_CHAR_STYLE_NAME_PREFIX + io_context.characterStyleCounter;
+            do {
+                charStyle = doc.characterStyles.itemByName(name);
+                if (charStyle && ! charStyle.isValid) {
+                    charStyle = null;
+                }
+                if (charStyle) {
+                    io_context.characterStyleCounter++;
+                    name = ARTIFICIAL_CHAR_STYLE_NAME_PREFIX + io_context.characterStyleCounter;
+                }
+            }
+            while (charStyle);
+
             var properties = {};
-            properties.name = ARTIFICIAL_CHAR_STYLE_NAME_PREFIX + io_context.characterStyleCounter;
+            properties.name = name;
             properties.basedOn = in_textStyleRange.appliedCharacterStyle;
             for (var attr in ATTRIBUTES_FOR_STYLE_COMPARISONS.TextStyleRange) {
                 if (ATTRIBUTES_FOR_STYLE_COMPARISONS.TextStyleRange[attr]) {
@@ -849,9 +932,14 @@ STYC.storyTextStyleRangeCleanup = function(io_context, in_textStyleRange) {
 
             STYC.addToCharacterStyleLookup(io_context, newArtificialCharacterStyle, definingTextStyleRangeHash);
 
-            in_textStyleRange.applyCharacterStyle(newArtificialCharacterStyle, false);
-            in_textStyleRange.clearOverrides(OverrideType.CHARACTER_ONLY);
-    
+            var startIdx = in_textStyleRange.characters.firstItem().index;
+            var endIdx = startIdx + in_textStyleRange.characters.length - 1;
+            io_context.textStyleRangeCleanupBatch.push({
+                startIdx: startIdx,
+                endIdx: endIdx,
+                charStyle: newArtificialCharacterStyle
+            });
+
         }
         catch (err) {
             LOG.logError("STYC.storyTextStyleRangeCleanup: throws " + err);
