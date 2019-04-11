@@ -1,7 +1,7 @@
 //
 // StyleCleanup.jsx - a script for Adobe InDesign
 //
-// v 1.0.0, March 23, 2019
+// v 1.0.1, April 11, 2019
 // written by Kris Coppieters, kris@rorohiko.com
 // https://www.linkedin.com/in/kristiaan/
 //
