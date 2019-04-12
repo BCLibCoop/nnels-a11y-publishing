@@ -3,9 +3,46 @@ Protected Class CFinalizeStartupTimer
 Inherits Timer
 	#tag Event
 		Sub Action()
-		  App.FinalizeStartup
+		  Action_Timer
 		End Sub
 	#tag EndEvent
+
+
+	#tag Method, Flags = &h0
+		Sub Action_Timer()
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Do
+		    
+		    Try
+		      
+		      Dim success as Boolean
+		      success = App.FinalizeStartup
+		      if not success then
+		        Log.LogError CurrentMethodName, "failed to finalize startup"
+		        Exit
+		      end if
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		    End Try
+		    
+		  Loop Until True
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		End Sub
+	#tag EndMethod
 
 
 	#tag ViewBehavior

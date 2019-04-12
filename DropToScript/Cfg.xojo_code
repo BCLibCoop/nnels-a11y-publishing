@@ -6,19 +6,25 @@ Protected Class Cfg
 	#tag Constant, Name = DISABLE_COMPILER_RUNTIME_CHECKS, Type = Boolean, Dynamic = False, Default = \"false", Scope = Public
 	#tag EndConstant
 
-	#tag Constant, Name = FILE_NAME_TEMP_SCRIPT, Type = String, Dynamic = False, Default = \"ca.nnels.a11y.publishing.dropphp.php", Scope = Public
+	#tag Constant, Name = EDIT_SYMBOL, Type = String, Dynamic = False, Default = \"\xE2\x87\xA0", Scope = Public
 	#tag EndConstant
 
-	#tag Constant, Name = FOLDER_NAME_PLUGINS, Type = String, Dynamic = False, Default = \"PHP_Plugins", Scope = Public
+	#tag Constant, Name = FILE_NAME_LOG, Type = String, Dynamic = False, Default = \"DropToScript.log", Scope = Public
+	#tag EndConstant
+
+	#tag Constant, Name = FILE_NAME_PREFS, Type = String, Dynamic = False, Default = \"DropToScriptPrefs.txt", Scope = Public
+	#tag EndConstant
+
+	#tag Constant, Name = FOLDER_NAME_PLUGINS, Type = String, Dynamic = False, Default = \"DropScripts", Scope = Public
 	#tag EndConstant
 
 	#tag Constant, Name = IS_ENTRY_EXIT_LOGGING, Type = Boolean, Dynamic = False, Default = \"false", Scope = Public
 	#tag EndConstant
 
-	#tag Constant, Name = LOG_FILE_NAME, Type = String, Dynamic = False, Default = \"DropPHP.log", Scope = Public
+	#tag Constant, Name = MAX_FILE_NAME_EXTENSION_LEN, Type = Double, Dynamic = False, Default = \"10", Scope = Public
 	#tag EndConstant
 
-	#tag Constant, Name = MAX_FILE_NAME_EXTENSION_LEN, Type = Double, Dynamic = False, Default = \"5", Scope = Public
+	#tag Constant, Name = SCRIPT_FILENAME_EXTENSION_LISTS, Type = String, Dynamic = False, Default = \".php.py.command.bat.", Scope = Public
 	#tag EndConstant
 
 

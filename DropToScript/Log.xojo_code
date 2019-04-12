@@ -27,7 +27,7 @@ Protected Class Log
 		      Exit
 		    end if
 		    
-		    fLogFile = fLogFile.Child(Cfg.LOG_FILE_NAME)
+		    fLogFile = fLogFile.Child(Cfg.FILE_NAME_LOG)
 		    if fLogFile = nil then
 		      Exit
 		    end if

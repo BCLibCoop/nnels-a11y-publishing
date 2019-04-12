@@ -38,7 +38,7 @@ Protected Module Utils
 		      retVal = extension
 		      
 		    Catch e As RuntimeException
-		      Log.LogError CurrentMethodName, "Throws " + e.Message
+		      Log.LogError CurrentMethodName, "throws " + e.Message
 		    End Try
 		    
 		  Loop Until True
@@ -88,7 +88,7 @@ Protected Module Utils
 		      retVal = fileName
 		      
 		    Catch e As RuntimeException
-		      Log.LogError CurrentMethodName, "Throws " + e.Message
+		      Log.LogError CurrentMethodName, "throws " + e.Message
 		    End Try
 		    
 		  Loop Until True
