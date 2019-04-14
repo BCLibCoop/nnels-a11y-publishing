@@ -34,6 +34,7 @@ Inherits Application
 		      
 		      success = Init
 		      if not success then
+		        Log.LogError CurrentMethodName + ": init failed"
 		        Exit
 		      end if
 		      
@@ -74,7 +75,9 @@ Inherits Application
 		      Quit
 		      
 		    Catch e As RuntimeException
-		      Log.LogError CurrentMethodName, "throws " + e.Message
+		      if not e isa EndException then
+		        Log.LogError CurrentMethodName, "throws " + e.Message
+		      end if
 		    End Try
 		    
 		  Loop Until True
@@ -276,7 +279,9 @@ Inherits Application
 		      end if
 		      
 		      Dim commandLine as String
-		      commandLine = scriptInterpreterPath + " " + fSelectedScript.ShellPath + " " + in_file.ShellPath
+		      commandLine = """" + scriptInterpreterPath + """ " + fSelectedScript.ShellPath + " " + in_file.ShellPath
+		      
+		      Log.LogNote CurrentMethodName, "commandLine = '" + commandLine + "'"
 		      
 		      Dim sh as Shell
 		      sh = new Shell
@@ -329,6 +334,7 @@ Inherits Application
 		    Try
 		      
 		      if fInitialized then
+		        Log.LogNote CurrentMethodName, "already initialized"
 		        success = true
 		        Exit
 		      end if
@@ -338,11 +344,13 @@ Inherits Application
 		      
 		      fPrefs = CPrefs.Factory(prefsFile)
 		      if fPrefs = nil then
+		        Log.LogError CurrentMethodName, "failed to create fPrefs"
 		        Exit
 		      end if
 		      
 		      fScriptCollection = CScriptCollection.Factory
 		      if fScriptCollection = nil then
+		        Log.LogError CurrentMethodName, "failed to create fScriptCollection"
 		        Exit
 		      end if
 		      

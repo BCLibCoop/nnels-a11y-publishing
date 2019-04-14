@@ -220,7 +220,7 @@ Protected Class CPrefs
 		    Try
 		      
 		      if in_idx < 0 or in_idx > UBound(fScriptFileNameExtensions) then
-		        Log.LogError CurrentMethodName, "in_idx out of bounds"
+		        Log.LogError CurrentMethodName, "in_idx out of bounds " + str(in_idx)
 		        Exit
 		      end if
 		      
@@ -314,6 +314,7 @@ Protected Class CPrefs
 		      end if
 		      
 		      if not fScriptInterpreterPathsByExtension.HasKey(extension) then
+		        Log.LogNote CurrentMethodName, "unlisted extension '" + extension + "'"
 		        Exit
 		      end if
 		      
@@ -358,7 +359,7 @@ Protected Class CPrefs
 		      end if
 		      
 		      if not fScriptInterpreterPathsByExtension.HasKey(extension) then
-		        Log.LogError CurrentMethodName, "invalid extension"
+		        Log.LogError CurrentMethodName, "invalid extension " + extension
 		        Exit
 		      end if
 		      
@@ -432,6 +433,7 @@ Protected Class CPrefs
 		      next
 		      
 		      if not fPrefsFile.Exists then
+		        Log.LogNote CurrentMethodName, "fPrefsFile does not exist"
 		        Exit
 		      end if
 		      
@@ -508,6 +510,7 @@ Protected Class CPrefs
 		    Try
 		      
 		      if not fDirty then
+		        Log.LogNote CurrentMethodName, "not saving because not dirty"
 		        Exit
 		      end if
 		      
@@ -586,7 +589,7 @@ Protected Class CPrefs
 		      end if
 		      
 		      if in_defaultScriptName <> "" and not scriptCollection.IsValidScriptName(in_defaultScriptName) then
-		        Log.LogError CurrentMethodName, "invalid script name"
+		        Log.LogError CurrentMethodName, "invalid script name " + in_defaultScriptName
 		        success = false
 		        Exit
 		      end if

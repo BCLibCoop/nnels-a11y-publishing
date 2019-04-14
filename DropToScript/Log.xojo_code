@@ -83,13 +83,20 @@ Protected Class Log
 		    end if
 		    
 		    Dim tos as TextOutputStream
-		    tos = TextOutputStream.Create(fLogFile)
+		    if fLogFile.Exists then
+		      tos = TextOutputStream.Append(fLogFile)
+		    else
+		      tos = TextOutputStream.Create(fLogFile)
+		    end if
 		    
 		    if tos = nil then
 		      Exit
 		    end if
 		    
-		    tos.WriteLine in_message
+		    Dim now as Date
+		    now = new Date
+		    
+		    tos.WriteLine now.ShortTime + ":" +  in_message
 		    
 		    tos.close
 		    

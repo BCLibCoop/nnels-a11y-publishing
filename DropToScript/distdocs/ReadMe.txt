@@ -1,0 +1,1 @@
+Please visit https://github.com/BCLibCoop/nnels-a11y-publishing/wiki/DropToScript-Documentation
