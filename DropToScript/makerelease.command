@@ -35,4 +35,6 @@ fi
 
 cd $curDir
 
+sleep 30
+
 ../DropScripts/makerelease.command

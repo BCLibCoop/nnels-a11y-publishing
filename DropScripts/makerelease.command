@@ -49,7 +49,7 @@ find . -name "__MACOSX" | while read a; do rm -rf "$a"; done
 xattr -cr "$newAppZipFolder/OS X 64 bit/DropToScript/DropToScript.app"
 
 cd $newAppZipFolder
-zip -9 -r ../$newAppZipFolder.zip *
+zip -9 -r -y ../$newAppZipFolder.zip *
 cd ..
 
 rm -rf $newAppZipFolder
