@@ -46,10 +46,10 @@ done
 
 find . -name ".DS_Store" | while read a; do rm "$a"; done
 find . -name "__MACOSX" | while read a; do rm -rf "$a"; done
-xattr -cr "$newAppZipFolder/OS X 64 bit/DropToScript.app"
+xattr -cr "$newAppZipFolder/OS X 64 bit/DropToScript/DropToScript.app"
 
 cd $newAppZipFolder
-zip -r ../$newAppZipFolder.zip *
+zip -9 -r ../$newAppZipFolder.zip *
 cd ..
 
 rm -rf $newAppZipFolder
