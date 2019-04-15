@@ -2,25 +2,28 @@ export curDir=`dirname "$0"`
 cd $curDir
 export curDir=`pwd`
 export scriptsDir="$curDir"
+export scriptsVersion=`cat version.txt`
 
 cd ../ReleaseVersions
 
-export appZip=`ls DropToScript*zip | sed -e "s/\.zip$//"`
+export oldAppZipFolder=`ls DropToScript*zip | sed -e "s/\.zip$//"`
+export appZipPrefix=`ls DropToScript*zip | sed -E "s/(_[0-9\.]*)?\.zip$//"`
+export newAppZipFolder="${appZipPrefix}_${scriptsVersion}"
 
-rm -rf $appZip
+rm -rf $oldAppZipFolder
 
-mkdir $appZip
-cd $appZip
+mkdir $newAppZipFolder
+cd $newAppZipFolder
 
-unzip ../$appZip.zip 
+unzip ../$oldAppZipFolder.zip 
 
 cd ..
 
-rm $appZip.zip
+rm $oldAppZipFolder.zip
 
-export linuxScripts="$appZip/Linux 64 bit/DropToScript/DropScripts"
-export macScripts="$appZip/OS X 64 bit/DropToScript/DropScripts"
-export winScripts="$appZip/Windows/DropToScript/DropScripts"
+export linuxScripts="$newAppZipFolder/Linux 64 bit/DropToScript/DropScripts"
+export macScripts="$newAppZipFolder/OS X 64 bit/DropToScript/DropScripts"
+export winScripts="$newAppZipFolder/Windows/DropToScript/DropScripts"
 
 rm -rf "$linuxScripts"
 rm -rf "$macScripts"
@@ -43,10 +46,10 @@ done
 
 find . -name ".DS_Store" | while read a; do rm "$a"; done
 find . -name "__MACOSX" | while read a; do rm -rf "$a"; done
-xattr -cr "$appZip/OS X 64 bit/DropToScript.app"
+xattr -cr "$newAppZipFolder/OS X 64 bit/DropToScript.app"
 
-cd $appZip
-zip -r ../$appZip.zip *
+cd $newAppZipFolder
+zip -r ../$newAppZipFolder.zip *
 cd ..
 
-rm -rf $appZip
+rm -rf $newAppZipFolder
