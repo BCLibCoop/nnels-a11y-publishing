@@ -26,3 +26,5 @@ if [ -d "$xojoHomeDir" ]; then
 	
 	fi
 fi
+
+../DropScripts/makerelease.command
