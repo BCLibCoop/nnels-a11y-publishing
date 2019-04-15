@@ -19,7 +19,7 @@ cd ..
 rm $appZip.zip
 
 export linuxScripts="$appZip/Linux 64 bit/DropToScript/DropScripts"
-export macScripts="$appZip/OS X 64 bit/DropScripts"
+export macScripts="$appZip/OS X 64 bit/DropToScript/DropScripts"
 export winScripts="$appZip/Windows/DropToScript/DropScripts"
 
 rm -rf "$linuxScripts"

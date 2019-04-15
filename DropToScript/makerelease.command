@@ -13,10 +13,16 @@ if [ -d "$xojoHomeDir" ]; then
 		cd "$curDir/Builds - DropToScript.xojo_project"
 		cp -R "$curDir/distdocs/ReadMe.txt" .
 		cp "$xojoHomeDir/Extras/Windows Runtime/Installers/vc_redist.x86.exe" Windows
+
+		if [ ! -d "OS X 64 bit/DropToScript" ]; then
+			mkdir "OS X 64 bit/DropToScript"
+			mv "OS X 64 bit/DropToScript.app" "OS X 64 bit/DropToScript"
+		fi
+
 		find . -name ".DS_Store" | while read a; do rm "$a"; done
 		find . -name "__MACOSX" | while read a; do rm -rf "$a"; done
-		xattr -cr "OS X 64 bit/DropToScript.app"
-		codesign --timestamp --verbose --deep --force --sign "Developer ID Application: Rorohiko Ltd. (UF54MCK725)" "OS X 64 bit/DropToScript.app"
+		xattr -cr "OS X 64 bit/DropToScript/DropToScript.app"
+		codesign --timestamp --verbose --deep --force --sign "Developer ID Application: Rorohiko Ltd. (UF54MCK725)" "OS X 64 bit/DropToScript/DropToScript.app"
 
 		mv Windows/DropToScript/DropToScript.exe Windows/DropToScript/DropToScript.exe.unsigned
 		osslsigncode sign -pkcs12 /Users/kris/Dropbox/RorohikoNotShared/Certificates/RorohikoSigningCert2023.p12 -askpass -n "DropToScript" -i "NNELS" -t http://timestamp.verisign.com/scripts/timstamp.dll -h sha2 -in Windows/DropToScript/DropToScript.exe.unsigned -out Windows/DropToScript/DropToScript.exe
@@ -26,5 +32,7 @@ if [ -d "$xojoHomeDir" ]; then
 	
 	fi
 fi
+
+cd $curDir
 
 ../DropScripts/makerelease.command
