@@ -17,11 +17,12 @@ if [ -d "$xojoHomeDir" ]; then
 		find . -name "__MACOSX" | while read a; do rm -rf "$a"; done
 		xattr -cr "OS X 64 bit/DropToScript.app"
 		codesign --timestamp --verbose --deep --force --sign "Developer ID Application: Rorohiko Ltd. (UF54MCK725)" "OS X 64 bit/DropToScript.app"
-		zip -y -r ../../ReleaseVersions/DropToScript.$version.zip *
 
 		mv Windows/DropToScript/DropToScript.exe Windows/DropToScript/DropToScript.exe.unsigned
-		osslsigncode sign -pkcs12 /Users/kris/Dropbox/RorohikoNotShared/Certificates/RorohikoSigningCert2023.p12 -pass "$1" -t http://timestamp.verisign.com/scripts/timstamp.dll -in Windows/DropToScript/DropToScript.exe.unsigned -out Windows/DropToScript/DropToScript.exe
+		osslsigncode sign -pkcs12 /Users/kris/Dropbox/RorohikoNotShared/Certificates/RorohikoSigningCert2023.p12 -askpass -n "DropToScript" -i "NNELS" -t http://timestamp.verisign.com/scripts/timstamp.dll -h sha2 -in Windows/DropToScript/DropToScript.exe.unsigned -out Windows/DropToScript/DropToScript.exe
 		rm Windows/DropToScript/DropToScript.exe.unsigned
+
+		zip -y -r ../../ReleaseVersions/DropToScript.$version.zip *
 	
 	fi
 fi
