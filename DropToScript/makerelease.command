@@ -11,13 +11,15 @@ export version=`grep ShortVersion DropToScript.xojo_project | sed -e "s/ShortVer
 if [ -d "$xojoHomeDir" ]; then
 	if [ -d "$curDir/Builds - DropToScript.xojo_project" ]; then
 		cd "$curDir/Builds - DropToScript.xojo_project"
-		cp -R "$curDir/distdocs/ReadMe.txt" .
+		cp "$curDir/distdocs/ReadMe.txt" .
 		cp "$xojoHomeDir/Extras/Windows Runtime/Installers/vc_redist.x86.exe" ../../ReleaseVersions
 
 		if [ ! -d "OS X 64 bit/DropToScript" ]; then
 			mkdir "OS X 64 bit/DropToScript"
 			mv "OS X 64 bit/DropToScript.app" "OS X 64 bit/DropToScript"
 		fi
+		
+		cp "$curDir/distdocs/initialSetupConfigApp.command" "OS X 64 bit/DropToScript"
 
 		find . -name ".DS_Store" | while read a; do rm "$a"; done
 		find . -name "__MACOSX" | while read a; do rm -rf "$a"; done
