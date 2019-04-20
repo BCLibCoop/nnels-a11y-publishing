@@ -424,7 +424,7 @@ function stripFileNameExtension($fileOrFilePath) {
                 $baseName = join(".", $baseNamePieces);
             }
 
-            if (! $dirName) {
+            if (! $dirName || $dirName == ".") {
                 $retVal = $baseName; 
             }
             else {

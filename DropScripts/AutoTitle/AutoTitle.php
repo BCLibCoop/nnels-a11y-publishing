@@ -63,7 +63,7 @@ function processDOM($config, &$isModified, &$dom) {
             $oldTitle = $title->textContent;
             $newTitle = $firstHeader;
             $droppedFileName = $config["droppedFileName"];
-            $droppedFileNameWithoutExtension = stripFileNameExtension(droppedFileName);
+            $droppedFileNameWithoutExtension = stripFileNameExtension($droppedFileName);
             $mustReplace = true;
 
             logNote("processDOM: forcedReplaceTitle = " . $config["forcedReplaceTitle"]);
@@ -72,7 +72,7 @@ function processDOM($config, &$isModified, &$dom) {
 
             if (! $config["forcedReplaceTitle"]) {
                 if ($oldTitle != $droppedFileName && $oldTitle != $droppedFileNameWithoutExtension) {
-                    logNote("processDOM: title is not the same as the file name. Not replacing existing title '" . $oldTitle . "'");
+                    logNote("processDOM: title is not the same as the file name " . $droppedFileNameWithoutExtension . ". Not replacing existing title '" . $oldTitle . "'");
                     $mustReplace = false;
                 }
             }
@@ -508,7 +508,7 @@ function stripFileNameExtension($fileOrFilePath) {
                 $baseName = join(".", $baseNamePieces);
             }
 
-            if (! $dirName) {
+            if (! $dirName || $dirName == ".") {
                 $retVal = $baseName; 
             }
             else {
