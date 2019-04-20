@@ -5,26 +5,93 @@
 
 function processDOM($config, &$isModified, &$dom) {
 
-    $isModified = false;
+    logEntry("processDOM");
 
-    $h1s = $dom->getElementsByTagName("h1");
-    if (count($h1s) > 0) {
-        foreach($h1s->item(0)->childNodes as $node) {
-            if ($node->nodeType != XML_TEXT_NODE) {
-                continue;
+    do { // non-loop
+
+        try {
+
+            $headerLevel = 1;
+            $firstHeader = "";
+            while (! $firstHeader && $headerLevel <= 9) {
+                $header = "h" . $headerLevel;
+                $headers = $dom->getElementsByTagName($header);
+                if (count($headers) > 0) {
+                    if ($config["keepTitleSubtags"]) {
+                        $firstHeader = $headers->item(0)->textContent;
+                    }
+                    else {
+                        if (isset($headers->item(0)->childNodes)) {
+                            foreach($headers->item(0)->childNodes as $node) {
+                                if ($node->nodeType != XML_TEXT_NODE) {
+                                    continue;
+                                }
+                                $firstHeader = $node->textContent;
+                            }
+                        }
+                    }
+                }
+                $headerLevel++;
             }
-            $firstH1 = $node->textContent;
-        }
-    }
 
-    if ($firstH1) {
-        $titles = $dom->getElementsByTagName("title");
-        if (count($titles) > 0) {
+            if (! $firstHeader) {
+                $paragraphs = $dom->getElementsByTagName("p");
+                if (count($paragraphs) > 0) {
+                    if (isset($paragraphs->item(0)->childNodes)) {
+                        foreach($paragraphs->item(0)->childNodes as $node) {
+                            if ($node->nodeType != XML_TEXT_NODE) {
+                                continue;
+                            }
+                            $firstHeader = $node->textContent;
+                        }
+                    }
+                }
+            }
+
+            if (! $firstHeader) {
+                logWarning("processDOM: no suitable header found");
+                break;
+            }
+
+            $titles = $dom->getElementsByTagName("title");
+            if (count($titles) <= 0) {
+                logWarning("processDOM: no <title> tag found");
+                break;
+            }
+
             $title = $titles->item(0);
-            $title->textContent = $firstH1;
+            $oldTitle = $title->textContent;
+            $newTitle = $firstHeader;
+            $fileNameWithoutExtension = stripFileNameExtension($config["droppedFileName"]);
+            $mustReplace = true;
+
+            logNote("processDOM: forcedReplaceTitle = " . $config["forcedReplaceTitle"]);
+            logNote("processDOM: old title = '" . $oldTitle . "'");
+            logNote("processDOM: new title = '" . $newTitle . "'");
+
+            if (! $config["forcedReplaceTitle"]) {
+                if ($oldTitle != $config["droppedFileName"]) {
+                    logNote("processDOM: title is not the same as the file name. Not replacing existing title '" . $oldTitle . "'");
+                    $mustReplace = false;
+                }
+            }
+
+            if (! $mustReplace) {
+                break;
+            }
+
+            logNote("processDOM: Replacing  '" . $oldTitle . "' with '" . $newTitle . "'");
+            $title->textContent = $newTitle;
             $isModified = true;
         }
+        catch (Exception $e) {
+            logError("processDOM: throws " . $e->getMessage());
+        }
     }
+    while (false); // non-loop
+
+    logExit("processDOM");
+
 }
 
 // -- AUTO-GENERATED CODE BELOW. DO NOT EDIT BELOW
@@ -40,6 +107,8 @@ function main($droppedFile) {
 
             $config = init($droppedFile);
 
+            logNote("main: forcedReplaceTitle = " . $config["forcedReplaceTitle"]);
+
             if (! file_exists($droppedFile)) {
                 logWarning("main: file does not exist " . $droppedFile);
                 break;
@@ -51,9 +120,19 @@ function main($droppedFile) {
             }
 
             $dom = new DomDocument();
+
+            if ($config["ignoreDOMParserErrors"]) {
+                libxml_use_internal_errors(true);
+            }
+
             $dom->loadHTMLFile($droppedFile);
 
+            if ($config["ignoreDOMParserErrors"]) {
+                libxml_clear_errors();
+            }
+
             $isModified = false;
+            
             processDOM($config, $isModified, $dom);
 
             // ...
@@ -90,9 +169,11 @@ function defaultConfig() {
     $config["acceptFileNameExtensions"] = [ "html", "htm", "xhtml" ];
     $config["backupFileNameExtension"]  = "old";
     $config["maxBackupCount"]           = 1;
-    $config["logLevel"]                 = LOG_WARNING;
+    $config["logLevel"]                 = LOG_NONE;
+    $config["logEntryExit"]             = false;
     $config["logToFile"]                = false; // File path or false
     $config["logToConsole"]             = true;  // true or false
+    $config["ignoreDOMParserErrors"]    = true;
 
     return $config;
 }
@@ -103,6 +184,7 @@ function defaultConfig() {
 function init($droppedFile) {
 
     global $LOGLEVEL;
+    global $LOG_ENTRY_EXIT;
     global $LOG_TO_FILE;
     global $LOG_TO_CONSOLE;
     $config = [];
@@ -120,8 +202,10 @@ function init($droppedFile) {
             $LOGLEVEL = $config["logLevel"];
             $LOG_TO_FILE = $config["logToFile"];
             $LOG_TO_CONSOLE = $config["logToConsole"];
+            $LOG_ENTRY_EXIT = $config["logEntryExit"];
 
             $localConfigFile = nearbyConfigFile($droppedFile);
+            logNote("attempt to load optional local config " . $localConfigFile);
             mergeConfig($config, $localConfigFile);
 
             // Allow over-riding 
@@ -129,6 +213,10 @@ function init($droppedFile) {
             $LOGLEVEL = $config["logLevel"];
             $LOG_TO_FILE = $config["logToFile"];
             $LOG_TO_CONSOLE = $config["logToConsole"];
+            $LOG_ENTRY_EXIT = $config["logEntryExit"];
+
+            $config["droppedFilePath"] = $droppedFile;            
+            $config["droppedFileName"] = basename($droppedFile);
         }
         catch (Exception $e) {
             // Logging might not work yet. Use echo
@@ -143,6 +231,8 @@ function init($droppedFile) {
 function isAcceptedFile($config, $filePath) {
 
     $retVal = false;
+
+    logEntry("isAcceptedFile");
 
     do { // non-loop
         try {
@@ -172,7 +262,17 @@ function isAcceptedFile($config, $filePath) {
     }
     while (false); // non-loop
 
+    logExit("isAcceptedFile");
+
     return $retVal;
+}
+
+function logEntry($function) {
+    global $LOG_ENTRY_EXIT;
+
+    if ($LOG_ENTRY_EXIT) {
+        logNote("ENTRY: " . $function);
+    }
 }
 
 function logError($message) {
@@ -180,6 +280,14 @@ function logError($message) {
 
     if ($LOGLEVEL >= LOG_ERROR) {
         logMessage("ERROR: " . $message);
+    }
+}
+
+function logExit($function) {
+    global $LOG_ENTRY_EXIT;
+
+    if ($LOG_ENTRY_EXIT) {
+        logNote("EXIT : " . $function);
     }
 }
 
@@ -227,6 +335,8 @@ function logWarning($message) {
 
 function makeBackup($config, $filePath) {
 
+    logEntry("makeBackup");
+
     //
     // If maxBackupCount = 1
     //    if the backup file does not exist: 
@@ -245,6 +355,7 @@ function makeBackup($config, $filePath) {
     //
 
     do { // non-loop
+
         try {
 
             $backupFile = $filePath . "." . $config["backupFileNameExtension"];
@@ -292,11 +403,15 @@ function makeBackup($config, $filePath) {
     }
     while (false); // non-loop
 
+    logExit("makeBackup");
 }
 
 function mergeConfig(&$config, $filePath) {
 
+    logEntry("mergeConfig");
+
     do { // non-loop
+
         try {
 
             $mergeConfigJSON = readFileContents($filePath);
@@ -304,6 +419,7 @@ function mergeConfig(&$config, $filePath) {
                 logNote("mergeConfig: no data retrieved from " . $filePath);
                 break;
             }
+            logNote("mergeConfig: mergeConfigJSON = \n" . $mergeConfigJSON);
 
             $mergeConfig = json_decode($mergeConfigJSON);
             foreach ($mergeConfig as $key => $value) {
@@ -317,28 +433,21 @@ function mergeConfig(&$config, $filePath) {
     }
     while (false); // non-loop
 
+    logExit("mergeConfig");
+
 }
 
 function nearbyConfigFile($filePath) {
 
-     do { // non-loop
+    logEntry("nearbyConfigFile");
+
+    do { // non-loop
 
         try {
 
             $parentDir = dirname($filePath);
-
-            $scriptFileName = basename(__FILE__);
-
-            // Strip extension
-
-            $scriptFileNamePieces = explode(".", $scriptFileName);
-            $numPieces = count($scriptFileNamePieces);
-            if ($numPieces > 1) {
-                array_splice($scriptFileNamePieces, $numPieces - 1, 1);
-                $scriptFileName = join(".", $scriptFileNamePieces);
-            }
-
-            $configFileName = $parentDir . "/" . $scriptFileName . ".config.txt";
+            $scriptFileName = stripFileNameExtension(basename(__FILE__));
+            $configFileName = $parentDir . DIRECTORY_SEPARATOR . $scriptFileName . ".config.txt";
 
         }
         catch (Exception $e) {
@@ -347,6 +456,8 @@ function nearbyConfigFile($filePath) {
     }
     while (false); // non-loop
 
+    logExit("nearbyConfigFile");
+
     return $configFileName;
 }
 
@@ -354,7 +465,9 @@ function readFileContents($filePath) {
 
     $retVal = "";
 
-     do { // non-loop
+    logEntry("readFileContents");
+ 
+    do { // non-loop
 
         try {
 
@@ -371,12 +484,56 @@ function readFileContents($filePath) {
     }
     while (false); // non-loop
 
+    logExit("readFileContents");
+
     return $retVal;
+}
+
+function stripFileNameExtension($fileOrFilePath) {
+
+    $retVal = $fileOrFilePath;
+
+    logEntry("stripFileNameExtension");
+
+    do { // non-loop
+
+        try {
+
+            $baseName = basename($fileOrFilePath);
+            $dirName = dirname($fileOrFilePath);
+
+            $baseNamePieces = explode(".", $baseName);
+            $numPieces = count($baseNamePieces);
+            if ($numPieces > 1) {
+                array_splice($baseNamePieces, $numPieces - 1, 1);
+                $baseName = join(".", $baseNamePieces);
+            }
+
+            if (! $dirName) {
+                $retVal = $baseName; 
+            }
+            else {
+                $retVal = $dirName . DIRECTORY_SEPARATOR . $baseName; 
+            }
+
+        }
+        catch (Exception $e) {
+            logError("stripFileNameExtension: throws " . $e->getMessage());
+        }
+    }
+    while (false); // non-loop
+
+    logExit("stripFileNameExtension");
+
+    return $retVal;
+
 }
 
 function writeFileContents($filePath, $content) {
 
-     do { // non-loop
+    logEntry("writeFileContents");
+
+    do { // non-loop
 
         try {
 
@@ -394,6 +551,8 @@ function writeFileContents($filePath, $content) {
         }
     }
     while (false); // non-loop
+
+    logExit("writeFileContents");
 
 }
 

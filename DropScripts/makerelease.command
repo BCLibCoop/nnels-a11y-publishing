@@ -33,21 +33,25 @@ mkdir "$linuxScripts"
 mkdir "$macScripts"
 mkdir "$winScripts"
 
-$dropScriptTemplateName=DropScriptTemplate
-$dropScriptTemplateFile=$scriptsDir/$dropScriptTemplateName/$dropScriptTemplateName.php
+export dropScriptTemplateName=DropScriptTemplate
+export dropScriptTemplateFile=$scriptsDir/$dropScriptTemplateName/$dropScriptTemplateName.php
 
 ls "$scriptsDir" | while read dropScriptDir
 do 
     export fullDropScriptDir="$scriptsDir/$dropScriptDir"
-    if [ -d "$fullDropScriptDir" -a $dropScriptDir != $dropScriptTemplateName ]
+    if [ -d "$fullDropScriptDir" -a "$dropScriptDir" != "$dropScriptTemplateName" ]
     then
-        $phpScript = $fullDropScriptDir/$dropScriptDir.php    
+        #
+        # Merge shared code in scripts with DropScriptTemplate.php
+        #
+        export phpScript=$fullDropScriptDir/$dropScriptDir.php    
         if [ -f "$phpScript" ]
         then
             sed -e "/AUTO-GENERATED/,\$d"  "$phpScript" > "$phpScript.update"
             sed -ne '/AUTO-GENERATED/,$ p' $dropScriptTemplateFile >> "$phpScript.update"
             rm -f "$phpScript"
             mv "$phpScript.update" "$phpScript"
+            chmod +x "$phpScript"
         fi
         cp -R "$fullDropScriptDir"/* "$linuxScripts"
         cp -R "$fullDropScriptDir"/* "$macScripts"
