@@ -1,0 +1,5 @@
+{
+    "acceptFileNameExtensions": [ "html", "htm", "xhtml" ],
+    "backupFileNameExtension": "old",
+    "maxBackupCount": 1
+}

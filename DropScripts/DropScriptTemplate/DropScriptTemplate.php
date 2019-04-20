@@ -1,30 +1,14 @@
 #!/usr/bin/php
 <?php
 
-// AutoTitle.php
-
 function processDOM($config, &$isModified, &$dom) {
 
-    $isModified = false;
+    // Do something (e.g. manipulate DOM)
+    // Set $isModified to true if you changed the DOM
+    // The $config might contain settings that change the behavior of your script.
+    //
 
-    $h1s = $dom->getElementsByTagName("h1");
-    if (count($h1s) > 0) {
-        foreach($h1s->item(0)->childNodes as $node) {
-            if ($node->nodeType != XML_TEXT_NODE) {
-                continue;
-            }
-            $firstH1 = $node->textContent;
-        }
-    }
-
-    if ($firstH1) {
-        $titles = $dom->getElementsByTagName("title");
-        if (count($titles) > 0) {
-            $title = $titles->item(0);
-            $title->textContent = $firstH1;
-            $isModified = true;
-        }
-    }
+    echo "Accepted\n" . readFileContents($droppedFile); // something to do as an example
 }
 
 // -- AUTO-GENERATED CODE BELOW. DO NOT EDIT BELOW
