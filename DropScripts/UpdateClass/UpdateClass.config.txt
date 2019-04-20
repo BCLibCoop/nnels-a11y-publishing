@@ -1,0 +1,13 @@
+{
+	"processTags": [
+		{
+			"tagMatch": "/^.*$/i",
+			"processClasses": [
+				{
+					"classMatch": "/_idGenCharOverride-\\d*/",
+					"classReplace": ""
+				}
+			]
+		}
+	]
+}

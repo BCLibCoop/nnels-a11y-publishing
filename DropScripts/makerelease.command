@@ -56,7 +56,15 @@ do
         cp -R "$fullDropScriptDir"/* "$linuxScripts"
         cp -R "$fullDropScriptDir"/* "$macScripts"
         cp -R "$fullDropScriptDir"/* "$winScripts"
+
     fi
+done
+
+ls "$winScripts/"*.txt "$winScripts/"*.php | while read winFile
+do
+    cp $winFile $winFile.lf
+    perl -p -e 's/\n/\r\n/' < $winFile.lf > $winFile
+    rm $winFile.lf   
 done
 
 find . -name ".DS_Store" | while read a; do rm "$a"; done

@@ -1,5 +1,4 @@
 {
 	"forcedReplaceTitle": 0,
-	"keepTitleSubtags":   0,
-	"logLevel":           0
+	"keepTitleSubtags":   0
 }

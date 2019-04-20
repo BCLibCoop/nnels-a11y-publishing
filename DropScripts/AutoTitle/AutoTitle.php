@@ -62,7 +62,8 @@ function processDOM($config, &$isModified, &$dom) {
             $title = $titles->item(0);
             $oldTitle = $title->textContent;
             $newTitle = $firstHeader;
-            $fileNameWithoutExtension = stripFileNameExtension($config["droppedFileName"]);
+            $droppedFileName = $config["droppedFileName"];
+            $droppedFileNameWithoutExtension = stripFileNameExtension(droppedFileName);
             $mustReplace = true;
 
             logNote("processDOM: forcedReplaceTitle = " . $config["forcedReplaceTitle"]);
@@ -70,7 +71,7 @@ function processDOM($config, &$isModified, &$dom) {
             logNote("processDOM: new title = '" . $newTitle . "'");
 
             if (! $config["forcedReplaceTitle"]) {
-                if ($oldTitle != $config["droppedFileName"]) {
+                if ($oldTitle != $droppedFileName && $oldTitle != $droppedFileNameWithoutExtension) {
                     logNote("processDOM: title is not the same as the file name. Not replacing existing title '" . $oldTitle . "'");
                     $mustReplace = false;
                 }
@@ -106,8 +107,6 @@ function main($droppedFile) {
         try {
 
             $config = init($droppedFile);
-
-            logNote("main: forcedReplaceTitle = " . $config["forcedReplaceTitle"]);
 
             if (! file_exists($droppedFile)) {
                 logWarning("main: file does not exist " . $droppedFile);
@@ -156,19 +155,19 @@ function main($droppedFile) {
 
 }
 
-define(LOG_NONE,    0);
-define(LOG_ERROR,   1);
-define(LOG_WARNING, 2);
-define(LOG_NOTE,    3);
-define(LOG_TRACE,   4);
+define("LOG_NONE",    0);
+define("LOG_ERROR",   1);
+define("LOG_WARNING", 2);
+define("LOG_NOTE",    3);
+define("LOG_TRACE",   4);
 
 function defaultConfig() {
 
     $config = [];
 
-    $config["acceptFileNameExtensions"] = [ "html", "htm", "xhtml" ];
+    $config["acceptFileNameExtensions"] = [ "html", "htm", "xhtml", "xht" ];
     $config["backupFileNameExtension"]  = "old";
-    $config["maxBackupCount"]           = 1;
+    $config["maxBackupCount"]           = 5;
     $config["logLevel"]                 = LOG_NONE;
     $config["logEntryExit"]             = false;
     $config["logToFile"]                = false; // File path or false
@@ -393,9 +392,9 @@ function makeBackup($config, $filePath) {
                 break;
             }
 
-            logNote("makeBackup: backup made to " . $backupFile);
-
             rename($filePath, $backupFile);
+
+            logNote("makeBackup: backup made to " . $backupFile);
         }
         catch (Exception $e) {
             logError("makeBackup: throws " . $e->getMessage());
