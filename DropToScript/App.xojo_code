@@ -279,7 +279,18 @@ Inherits Application
 		      end if
 		      
 		      Dim commandLine as String
-		      commandLine = """" + scriptInterpreterPath + """ " + fSelectedScript.ShellPath + " " + in_file.ShellPath
+		      
+		      #if TargetWindows
+		        
+		        // Shellpaths are shortened. Mix up a shortened parent dir path with an unshortened file name
+		        
+		        Dim parentFolderShellPath as String
+		        parentFolderShellPath = in_file.Parent.ShellPath
+		        
+		        commandLine = """" + scriptInterpreterPath + """ " + fSelectedScript.ShellPath + " """ + parentFolderShellPath + "\" + in_file.Name + """"
+		      #else
+		        commandLine = """" + scriptInterpreterPath + """ " + fSelectedScript.ShellPath + " " + in_file.ShellPath
+		      #endif
 		      
 		      Log.LogNote CurrentMethodName, "commandLine = '" + commandLine + "'"
 		      

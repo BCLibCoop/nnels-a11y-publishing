@@ -359,6 +359,7 @@ function makeBackup($config, $filePath) {
                     $previousBackupFile = "";
                     while ($backupCount >= 2) {
                         $backupFile =  $filePath . "_" . $backupCount . "." . $config["backupFileNameExtension"];
+                        $backupCount--;
                         if (file_exists($backupFile)) {
                             if (! $previousBackupFile) {
                                 unlink($backupFile);
