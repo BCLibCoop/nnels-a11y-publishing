@@ -30,7 +30,7 @@ The default when this is omitted is:
 
 ### logLevel
 
-Set to 0, 1, 2, 3, or 5. Depending on the number, more or less logging information will be
+Set to 0, 1, 2, 3, or 4. Depending on the number, more or less logging information will be
 provided. Useful for diagnostics when the script does not seem to work correctly.
 
 The default when this is omitted is:
