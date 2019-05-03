@@ -17,6 +17,7 @@ Protected Class CPrefs
 		    Try
 		      
 		      fDefaultScriptName = ""
+		      fTargetFileNameExtensions = kDefaultTargetFileNameExtensions
 		      fDirty = false
 		      fPrefsFile = in_prefsFile
 		      Redim fScriptFileNameExtensions(-1)
@@ -380,6 +381,47 @@ Protected Class CPrefs
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
+		Function GetTargetFileNameExtensionDict() As Dictionary
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  Dim retVal as Dictionary
+		  retVal = new Dictionary
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Do 
+		    
+		    Try
+		      
+		      Dim extensions() as String
+		      extensions = fTargetFileNameExtensions.Split(".")
+		      
+		      for each extension as String in extensions
+		        retVal.Value(extension) = true
+		      next
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		    End Try
+		    
+		  Loop Until True
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  return retVal
+		  
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
 		Function ReloadPrefs() As Boolean
 		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
 		    #Pragma DisableBoundsChecking
@@ -447,29 +489,46 @@ Protected Class CPrefs
 		      
 		      fDefaultScriptName = tis.ReadLine
 		      
+		      Dim outOfBandLineIdx as integer
+		      
 		      while not tis.EOF
 		        
 		        Dim line as String
 		        line = tis.ReadLine
 		        
-		        Dim lineSplit() as String
-		        lineSplit = line.split(".")
-		        
-		        Dim lineExtension as String
-		        lineExtension = lineSplit(0)
-		        
-		        Dim lineScriptInterpreterPath as String
-		        lineScriptInterpreterPath = Trim(Mid(line, Len(lineExtension) + 2))
-		        
-		        lineExtension = Trim(lineExtension)
-		        
-		        if lineScriptInterpreterPath <> "" and lineExtension <> "" then
+		        // Prefix out-of-band lines with ".."
+		        if left(line, Len(kOutOfBandPrefix)) = kOutOfBandPrefix then
 		          
-		          if not fScriptInterpreterPathsByExtension.HasKey(lineExtension) then
-		            fScriptFileNameExtensions.Append lineExtension
+		          line = Mid(line, Len(kOutOfBandPrefix) + 1)
+		          
+		          if outOfBandLineIdx = 0 then
+		            fTargetFileNameExtensions = line
 		          end if
 		          
-		          fScriptInterpreterPathsByExtension.Value(lineExtension) = lineScriptInterpreterPath
+		          outOfBandLineIdx = outOfBandLineIdx + 1
+		          
+		        else
+		          
+		          Dim lineSplit() as String
+		          lineSplit = line.split(".")
+		          
+		          Dim lineExtension as String
+		          lineExtension = lineSplit(0)
+		          
+		          Dim lineScriptInterpreterPath as String
+		          lineScriptInterpreterPath = Trim(Mid(line, Len(lineExtension) + 2))
+		          
+		          lineExtension = Trim(lineExtension)
+		          
+		          if lineScriptInterpreterPath <> "" and lineExtension <> "" then
+		            
+		            if not fScriptInterpreterPathsByExtension.HasKey(lineExtension) then
+		              fScriptFileNameExtensions.Append lineExtension
+		            end if
+		            
+		            fScriptInterpreterPathsByExtension.Value(lineExtension) = lineScriptInterpreterPath
+		          end if
+		          
 		        end if
 		        
 		      wend
@@ -523,6 +582,7 @@ Protected Class CPrefs
 		      tos = TextOutputStream.Create(fPrefsFile)
 		      
 		      tos.WriteLine fDefaultScriptName
+		      tos.WriteLine kOutOfBandPrefix + fTargetFileNameExtensions
 		      
 		      Dim extensions() as Variant
 		      extensions = fScriptInterpreterPathsByExtension.Keys
@@ -691,6 +751,17 @@ Protected Class CPrefs
 	#tag Property, Flags = &h21
 		Private fScriptInterpreterPathsByExtension As Dictionary
 	#tag EndProperty
+
+	#tag Property, Flags = &h21
+		Private fTargetFileNameExtensions As String
+	#tag EndProperty
+
+
+	#tag Constant, Name = kDefaultTargetFileNameExtensions, Type = String, Dynamic = False, Default = \"xhtml.html.htm.css", Scope = Private
+	#tag EndConstant
+
+	#tag Constant, Name = kOutOfBandPrefix, Type = String, Dynamic = False, Default = \"..", Scope = Private
+	#tag EndConstant
 
 
 	#tag ViewBehavior

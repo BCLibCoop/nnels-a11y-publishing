@@ -6,9 +6,21 @@ function processDOM($config, &$isModified, &$dom) {
     // Do something (e.g. manipulate DOM)
     // Set $isModified to true if you changed the DOM
     // The $config might contain settings that change the behavior of your script.
-    //
 
-    echo "Accepted\n" . readFileContents($droppedFile); // something to do as an example
+}
+
+function preProcessFile($config, &$isModified, &$fileContents) {
+
+    // If you reverse the changes made here in postProcessFile, you should
+    // not set isModified
+
+}
+
+function postProcessFile($config, &$isModified, &$fileContents) {
+
+    // If this reverses the changes made in preProcessFile, you should
+    // not set isModified
+
 }
 
 // -- AUTO-GENERATED CODE BELOW. DO NOT EDIT BELOW
@@ -34,32 +46,35 @@ function main($droppedFile) {
                 break;
             }
 
+            $isModified = false;
+
+            $fileContents = file_get_contents($droppedFile);
+
+            preProcessFile($config, $isModified, $fileContents);
+
             $dom = new DomDocument();
 
             if ($config["ignoreDOMParserErrors"]) {
                 libxml_use_internal_errors(true);
             }
 
-            $dom->loadHTMLFile($droppedFile);
+            $dom->loadHTML($fileContents);
 
             if ($config["ignoreDOMParserErrors"]) {
                 libxml_clear_errors();
             }
-
-            $isModified = false;
             
             processDOM($config, $isModified, $dom);
 
-            // ...
-            //
+            $output = $dom->saveHTML();
+
+            postProcessFile($config, $isModified, $output);            
 
             if (! $isModified) {
                 break;
             }
 
             makeBackup($config, $droppedFile);
-
-            $output = $dom->saveHTML();
 
             writeFileContents($droppedFile, $output);
         }
@@ -81,7 +96,7 @@ function defaultConfig() {
 
     $config = [];
 
-    $config["acceptFileNameExtensions"] = [ "html", "htm", "xhtml", "xht" ];
+    $config["acceptFileNameExtensions"] = [ "html", "htm", "xhtml" ];
     $config["backupFileNameExtension"]  = "old";
     $config["maxBackupCount"]           = 5;
     $config["logLevel"]                 = LOG_NONE;

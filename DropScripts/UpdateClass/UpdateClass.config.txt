@@ -6,6 +6,22 @@
 				{
 					"classMatch": "/_idGenCharOverride-\\d*/",
 					"classReplace": ""
+				},
+				{
+					"classMatch": "/_idGenParaOverride-\\d*/",
+					"classReplace": ""
+				},
+				{
+					"classMatch": "/_idGenDropcap-\\d*/",
+					"classReplace": ""
+				},
+				{
+					"classMatch": "/_idGenObjectLayout-\\d*/",
+					"classReplace": ""
+				},				
+				{
+					"classMatch": "/_idGenObjectAttribute-\\d*/",
+					"classReplace": ""
 				}
 			]
 		}

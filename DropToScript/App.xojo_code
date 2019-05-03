@@ -14,6 +14,624 @@ Inherits Application
 	#tag EndEvent
 
 
+	#tag Method, Flags = &h21
+		Private Sub AddFile(in_zipFile as ZipMBS, in_file as FolderItem, in_fileNameInZip as String)
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Do 
+		    
+		    Try
+		      
+		      Dim fileInfo as new ZipFileInfoMBS
+		      fileInfo.SetDate in_file.CreationDate
+		      in_zipFile.CreateFile(in_fileNameInZip,  fileInfo, "", "", "", ZipMBS.MethodDeflated, ZipMBS.CompressionDefault, false)
+		      
+		      Dim inData as String
+		      
+		      Dim inStream As BinaryStream
+		      inStream = BinaryStream.Open(in_file, false)
+		      
+		      const kBufferSize = 10240
+		      
+		      Dim block as String
+		      
+		      Do
+		        
+		        block = inStream.Read(kBufferSize)
+		        
+		        if block.Len > 0 then
+		          in_zipFile.Write(block)
+		        end if
+		        
+		      Loop Until inStream.EOF
+		      
+		      inStream.Close
+		      
+		      in_zipFile.CloseFile
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		    End Try
+		    
+		  Loop Until true
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogExit CurrentMethodName
+		  #EndIf
+		  
+		End Sub
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Sub AddFiles(in_zipFile as ZipMBS, in_dir as FolderItem, in_prefix as String)
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Do 
+		    
+		    Try
+		      
+		      if not in_dir.Directory then
+		        Log.LogError CurrentMethodName, "in_dir must be a directory"
+		        exit
+		      end if
+		      
+		      Dim nItems as integer
+		      nItems = in_dir.Count
+		      
+		      for idx as Integer = 1 to nItems
+		        
+		        Dim file as FolderItem
+		        file = in_dir.Item(idx)
+		        
+		        if file.Directory then
+		          Dim subPrefix as String
+		          subPrefix = in_prefix + file.Name + "/"
+		          AddFiles in_zipFile, file, subPrefix
+		        elseif file.name <> "mimetype" and left(file.name,1) <> "."  then
+		          AddFile in_zipFile, file, in_prefix + file.name
+		        end if
+		        
+		      next
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		    End Try
+		    
+		  Loop Until true
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogExit CurrentMethodName
+		  #EndIf
+		  
+		  
+		End Sub
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function CleanupFolderContent(in_folder as FolderItem, in_folderContentDict as Dictionary) As Boolean
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Dim success as Boolean
+		  
+		  Do 
+		    
+		    Try
+		      
+		      if in_folder = nil then
+		        Log.LogError CurrentMethodName, "in_folder is nil"
+		        Exit
+		      end if
+		      
+		      if in_folderContentDict = nil then
+		        Log.LogError CurrentMethodName, "in_folderContentDict is nil"
+		        Exit
+		      end if
+		      
+		      if not in_folder.Exists() then
+		        Log.LogNote CurrentMethodName, "in_folder does not exist"
+		        Exit
+		      end if
+		      
+		      success = true
+		      
+		      Dim itemCount as integer
+		      itemCount = in_folder.Count
+		      dim filesToDelete() as FolderItem
+		      dim folders() as FolderItem
+		      for itemIdx as integer = 1 to itemCount
+		        
+		        dim file as FolderItem
+		        file = in_folder.TrueItem(itemIdx)
+		        
+		        if file <> nil then
+		          
+		          if file.Directory then
+		            folders.Append file
+		          else
+		            
+		            if not in_folderContentDict.HasKey(file.NativePath) then
+		              filesToDelete.Append file
+		            end if
+		            
+		          end if
+		          
+		        end if
+		        
+		      next
+		      
+		      for each file as FolderItem in filesToDelete
+		        file.Delete
+		      next
+		      
+		      Redim filesToDelete(-1)
+		      
+		      for each folder as FolderItem in folders
+		        
+		        success = CleanupFolderContent(folder, in_folderContentDict) and success
+		        
+		      next
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		    End Try
+		    
+		  Loop Until true
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogExit CurrentMethodName
+		  #EndIf
+		  
+		  return success
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function ConvertToEPUB(in_epubFolder as FolderItem, in_outputEPUBFile as FolderItem) As Boolean
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  Dim success as Boolean
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Do 
+		    
+		    Try
+		      
+		      if in_outputEPUBFile.Exists then
+		        Log.LogError CurrentMethodName, "in_outputEPUBFile already exists"
+		        Exit
+		      end if
+		      
+		      Dim emptyZip as String
+		      emptyZip = DecodeHex("504B03040A0000000000D103DA406F61AB2C1400000014000000080000006D696D65747970656170706C69636174696F6E2F657075622B7A6970504B01021E030A0000000000D103DA406F61AB2C1400000014000000080000000000000000000000A481000000006D696D6574797065504B05060000000001000100360000003A0000000000")
+		      
+		      Dim binStream as BinaryStream
+		      binStream = BinaryStream.Create(in_outputEPUBFile, True)
+		      binStream.Write emptyZip
+		      binStream.close
+		      
+		      Dim zipFile as ZipMBS
+		      zipFile = new ZipMBS(in_outputEPUBFile, ZipMBS.AppendStatusAddInZip)
+		      
+		      AddFiles zipFile, in_epubFolder, ""
+		      
+		      zipFile.Close
+		      
+		      success = true
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		    End Try
+		    
+		  Loop Until true
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  return success
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function CreateFolderContentDict(in_folder as FolderItem, io_folderContentDict as Dictionary) As Boolean
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Dim success as Boolean
+		  
+		  Do 
+		    
+		    Try
+		      
+		      if in_folder = nil then
+		        Log.LogError CurrentMethodName, "in_folder is nil"
+		        Exit
+		      end if
+		      
+		      if io_folderContentDict = nil then
+		        Log.LogError CurrentMethodName, "io_folderContentDict is nil"
+		        Exit
+		      end if
+		      
+		      if not in_folder.Exists() then
+		        Log.LogNote CurrentMethodName, "in_folder does not exist"
+		        Exit
+		      end if
+		      
+		      success = true
+		      
+		      Dim itemCount as integer
+		      itemCount = in_folder.Count
+		      dim folders() as FolderItem
+		      for itemIdx as integer = 1 to itemCount
+		        
+		        dim file as FolderItem
+		        file = in_folder.TrueItem(itemIdx)
+		        
+		        if file <> nil then
+		          
+		          if file.Directory then
+		            folders.Append file
+		          else
+		            io_folderContentDict.Value(file.NativePath) = true
+		          end if
+		          
+		        end if
+		      next
+		      
+		      for each folder as FolderItem in folders
+		        
+		        success = CreateFolderContentDict(folder, io_folderContentDict) and success
+		        
+		      next
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		    End Try
+		    
+		  Loop Until true
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogExit CurrentMethodName
+		  #EndIf
+		  
+		  return success
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function CreateSubFolder(in_parentFolder as FolderItem, in_path as String) As FolderItem
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Dim retVal as FolderItem
+		  
+		  Do 
+		    
+		    Try
+		      
+		      Dim segmentCount as integer
+		      segmentCount = CountFields(in_path, "/")
+		      
+		      dim folder as FolderItem 
+		      folder = in_parentFolder
+		      
+		      for segmentIdx as integer = 1 to segmentCount
+		        
+		        dim segment as string
+		        segment = NthField(in_path, "/", segmentIdx)
+		        
+		        if segment <> "" then
+		          
+		          if not folder.Exists then
+		            folder.CreateAsFolder
+		          end if
+		          
+		          folder = folder.Child(segment)
+		          
+		        end if
+		        
+		      next
+		      
+		      retVal = folder 
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		    End Try
+		    
+		  Loop Until true
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Return retVal
+		  
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function DeleteFolder(in_folder as FolderItem, in_continueIfErrors as Boolean = false) As Integer
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  // Returns an error code if it fails, or zero if the folder was deleted successfully
+		  
+		  Dim retVal as integer
+		  
+		  Do 
+		    
+		    Try
+		      
+		      
+		      if in_folder = nil then
+		        Log.LogError CurrentMethodName, "in_folder is nil"
+		        Exit
+		      end if
+		      
+		      if not in_folder.Exists() then
+		        Log.LogNote CurrentMethodName, "in_folder does not exist"
+		        Exit
+		      end if
+		      
+		      // Collect the folder‘s contents first.
+		      // This is faster than collecting them in reverse order and deleting them right away!
+		      
+		      Dim itemCount as integer
+		      itemCount = in_folder.Count
+		      dim files(), folders() as FolderItem
+		      for itemIdx as integer = 1 to itemCount
+		        
+		        dim file as FolderItem
+		        file = in_folder.TrueItem(itemIdx)
+		        
+		        if file <> nil then
+		          
+		          if file.Directory then
+		            folders.Append file
+		          else
+		            files.Append file
+		          end if
+		          
+		        end if
+		      next
+		      
+		      for each file as FolderItem in files
+		        
+		        file.Delete
+		        
+		        Dim lastErr as integer
+		        lastErr = file.LastErrorCode
+		        
+		        if lastErr <> 0 then
+		          
+		          if retVal = 0 then 
+		            retVal = lastErr
+		          end if
+		          
+		          if not in_continueIfErrors then
+		            Exit // for
+		          end if
+		          
+		        end if
+		        
+		      next
+		      
+		      if retVal <> 0 and not in_continueIfErrors then
+		        Exit
+		      end if
+		      
+		      // Free the memory used by the files array before we enter recursion
+		      Redim files(-1) 
+		      
+		      // Now delete the directories
+		      for each folder as FolderItem in folders
+		        
+		        Dim lastErr as integer
+		        lastErr = DeleteFolder(folder, in_continueIfErrors)
+		        
+		        if lastErr <> 0 then
+		          
+		          if retVal = 0 then 
+		            retVal = lastErr
+		          end if
+		          
+		          if not in_continueIfErrors then
+		            Exit // for
+		          end if
+		          
+		        end if
+		        
+		      next
+		      
+		      if retVal <> 0 and not in_continueIfErrors then
+		        Exit
+		      end if
+		      
+		      in_folder.Delete
+		      
+		      retVal = in_folder.LastErrorCode
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		    End Try
+		    
+		  Loop Until true
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogExit CurrentMethodName
+		  #EndIf
+		  
+		  return retVal
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function ExtractFiles(in_zipFile as FolderItem, in_destDir as FolderItem) As Boolean
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Dim success as Boolean
+		  
+		  Do 
+		    
+		    Try
+		      
+		      Do
+		        If in_zipFile = Nil Or Not in_zipFile.exists Then
+		          Log.LogError CurrentMethodName, "in_zipFile does not exist"
+		          Exit
+		        End If
+		        
+		        If in_destDir = Nil Then
+		          Log.LogError CurrentMethodName, "in_destDir is nil"
+		          Exit
+		        End If
+		        
+		        If in_destDir.exists and Not in_destDir.Directory Then
+		          Log.LogError CurrentMethodName, "in_destDir is an existing file"
+		          Exit
+		        End If
+		        
+		        dim unZipFile as UnZipMBS
+		        unZipFile = new UnZipMBS(in_zipFile)
+		        
+		        unZipFile.GoToFirstFile
+		        
+		        const kBufferSize = 10240
+		        Dim file as FolderItem
+		        Dim info as UnZipFileInfoMBS
+		        Dim block as String
+		        do
+		          
+		          dim path as string
+		          path = unZipFile.FileName
+		          path = DefineEncoding(path, encodings.ASCII)
+		          
+		          dim isFolder as Boolean
+		          isFolder = Right(path,1) = "/"
+		          
+		          file = CreateSubFolder(in_destDir, path)
+		          
+		          info = unZipFile.FileInfo
+		          
+		          if isFolder then
+		            
+		            file.CreateAsFolder
+		            
+		          else
+		            
+		            dim binStream as BinaryStream 
+		            binStream = file.CreateBinaryFile("")
+		            
+		            if binStream <> nil then
+		              
+		              unZipFile.OpenCurrentFile
+		              
+		              if unZipFile.LastError = 0 then
+		                
+		                do
+		                  
+		                  block = unZipFile.ReadCurrentFile(kBufferSize)
+		                  binStream.Write block
+		                  
+		                loop until lenb(block) = 0
+		                
+		                unZipFile.CloseCurrentFile
+		                
+		                binStream.Close
+		                
+		              end if
+		              
+		            end if
+		            
+		          end if
+		          
+		          file.ModificationDate = info.Date
+		          file.CreationDate = info.date
+		          
+		          unZipFile.GoToNextFile
+		          
+		        loop until unZipFile.LastError <> 0
+		        
+		        success = true
+		        
+		      Loop Until True
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		    End Try
+		    
+		  Loop Until true
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogExit CurrentMethodName
+		  #EndIf
+		  
+		  
+		  return success
+		End Function
+	#tag EndMethod
+
 	#tag Method, Flags = &h0
 		Function FinalizeStartup() As Boolean
 		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
@@ -225,6 +843,241 @@ Inherits Application
 	#tag EndMethod
 
 	#tag Method, Flags = &h21
+		Private Function GetTargetFiles(in_folder as FolderItem, in_targetFileNameExtensionDict as Dictionary, ByRef io_targetFiles() as FolderItem) As Boolean
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Dim success as Boolean
+		  
+		  Do 
+		    
+		    Try
+		      
+		      if in_folder = nil then
+		        Log.LogError CurrentMethodName, "in_folder is nil"
+		        Exit
+		      end if
+		      
+		      if not in_folder.Exists() then
+		        Log.LogNote CurrentMethodName, "in_folder does not exist"
+		        Exit
+		      end if
+		      
+		      success = true
+		      
+		      Dim itemCount as integer
+		      itemCount = in_folder.Count
+		      
+		      dim folders() as FolderItem
+		      for itemIdx as integer = 1 to itemCount
+		        
+		        dim file as FolderItem
+		        file = in_folder.TrueItem(itemIdx)
+		        
+		        if file <> nil then
+		          
+		          if file.Directory then
+		            folders.Append file
+		          else
+		            Dim fileNameExtension as String
+		            fileNameExtension = GetFileNameExtension(file.name)
+		            
+		            if in_targetFileNameExtensionDict.HasKey(fileNameExtension) and in_targetFileNameExtensionDict.Value(fileNameExtension) then
+		              io_targetFiles.Append file
+		            end if
+		            
+		          end if
+		          
+		        end if
+		        
+		      next
+		      
+		      for each folder as FolderItem in folders
+		        
+		        success = GetTargetFiles(folder, in_targetFileNameExtensionDict, io_targetFiles)
+		        if not success then
+		          Exit
+		        end if
+		        
+		      next
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		      success = false
+		    End Try
+		    
+		  Loop Until true
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogExit CurrentMethodName
+		  #EndIf
+		  
+		  return success
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function HandleDroppedEPUB(in_epubFile as FolderItem) As Boolean
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  Dim success as Boolean
+		  Dim prvRecursiveEPUB as Boolean
+		  static recursiveEPUB as Boolean
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  prvRecursiveEPUB = recursiveEPUB
+		  
+		  Do
+		    
+		    Try
+		      
+		      if recursiveEPUB then
+		        Log.LogError CurrentMethodName, "recursiveEPUB"
+		        Exit
+		      end if
+		      
+		      recursiveEPUB = true
+		      
+		      if in_epubFile = nil then
+		        Log.LogError CurrentMethodName, "in_epubFile is nil"
+		        Exit
+		      end if
+		      
+		      if not in_epubFile.Exists then
+		        Log.LogError CurrentMethodName, "in_epubFile does not exist"
+		        Exit
+		      end if
+		      
+		      if fTemporaryDecompressedEPUB = nil then
+		        fTemporaryDecompressedEPUB = GetTemporaryFolderItem()
+		      end if
+		      
+		      if fTemporaryDecompressedEPUB.Exists then
+		        if fTemporaryDecompressedEPUB.Directory then
+		          if DeleteFolder(fTemporaryDecompressedEPUB) <> 0 then
+		            Log.LogError CurrentMethodName, "failed to delete fTemporaryDecompressedEPUB"
+		            Exit
+		          end if
+		        else
+		          fTemporaryDecompressedEPUB.Delete
+		        end if
+		      end if
+		      
+		      if fTemporaryDecompressedEPUB.Exists then
+		        Log.LogError CurrentMethodName, "cannot delete fTemporaryDecompressedEPUB"
+		        Exit
+		      end if
+		      
+		      if not ExtractFiles(in_epubFile, fTemporaryDecompressedEPUB) then
+		        Log.LogError CurrentMethodName, "failed to extract EPUB"
+		        Exit
+		      end if
+		      
+		      Dim targetFileNameExtensionDict as Dictionary
+		      targetFileNameExtensionDict = fPrefs.GetTargetFileNameExtensionDict
+		      if targetFileNameExtensionDict = nil then
+		        Log.LogError CurrentMethodName, "targetFileNameExtensionDict = nil"
+		        Exit
+		      end if
+		      
+		      dim targetFiles() as FolderItem
+		      if not GetTargetFiles(fTemporaryDecompressedEPUB, targetFileNameExtensionDict, targetFiles) then
+		        Log.LogError CurrentMethodName, "GetTargetFiles failed"
+		        Exit
+		      end if
+		      
+		      if UBound(targetFiles) < 0 then
+		        Log.LogError CurrentMethodName, "no target files found"
+		        Exit
+		      end if
+		      
+		      Dim beforeContentDict as Dictionary
+		      beforeContentDict = new Dictionary
+		      if not CreateFolderContentDict(fTemporaryDecompressedEPUB, beforeContentDict) then
+		        Log.LogError CurrentMethodName, "cannot create content snapshot"
+		        Exit
+		      end if
+		      
+		      for each targetFile as FolderItem in targetFiles
+		        if not HandleDroppedFile(targetFile) then
+		          Log.LogError CurrentMethodName, "failed to process " + targetFile.NativePath
+		        end if
+		      next
+		      
+		      if not CleanupFolderContent(fTemporaryDecompressedEPUB, beforeContentDict) then
+		        Log.LogError CurrentMethodName, "cannot clean up backup files"
+		        Exit
+		      end if
+		      
+		      if not MoveToBackup(in_epubFile) then
+		        Log.LogError CurrentMethodName, "failed to backup old EPUB"
+		        Exit
+		      end if
+		      
+		      if not ConvertToEPUB(fTemporaryDecompressedEPUB, in_epubFile) then
+		        Log.LogError CurrentMethodName, "failed to recompress EPUB"
+		        Exit
+		      end if
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		    End Try
+		    
+		  Loop Until True
+		  
+		  // Cleanup
+		  
+		  Do
+		    
+		    Try
+		      
+		      if fTemporaryDecompressedEPUB = nil then
+		        Exit
+		      end if
+		      
+		      if not fTemporaryDecompressedEPUB.Exists then
+		        Exit
+		      end if
+		      
+		      if fTemporaryDecompressedEPUB.Directory then
+		        Dim lastErr as Integer
+		        lastErr = DeleteFolder(fTemporaryDecompressedEPUB)
+		      else
+		        fTemporaryDecompressedEPUB.Delete
+		      end if
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "cleanup throws " + e.Message
+		    End Try
+		    
+		  Loop Until True
+		  
+		  recursiveEPUB = prvRecursiveEPUB
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  return success
+		  
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
 		Private Function HandleDroppedFile(in_file as FolderItem) As Boolean
 		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
 		    #Pragma DisableBoundsChecking
@@ -249,6 +1102,13 @@ Inherits Application
 		      
 		      if not in_file.Exists then
 		        Log.LogError CurrentMethodName, "in_file does not exist"
+		        Exit
+		      end if
+		      
+		      Dim droppedFileExtension as String
+		      droppedFileExtension = Utils.GetFileNameExtension(in_file.Name)
+		      if droppedFileExtension = "EPUB" then
+		        success = HandleDroppedEPUB(in_file)
 		        Exit
 		      end if
 		      
@@ -350,6 +1210,18 @@ Inherits Application
 		        Exit
 		      end if
 		      
+		      // Rorohiko Ltd., MBS Complete, 201909, KR0R31CRZz72LQG1y+S20L4fzQtrsL7617I1NwH4h5x0HLn+2sV+asaOEDQC1AJ=
+		      dim s as string = decodeBase64("S1IwUjMxQ1JaejcyTFFHMXkrUzI=", encodings.UTF8)
+		      dim p as string = decodeBase64("TUJTIENvbXBsZXRl", encodings.UTF8)
+		      dim n as string = decodeBase64("Um9yb2hpa28gTHRkLg==", encodings.UTF8)
+		      dim e as integer = 201909
+		      dim t as string = decodeBase64("MEw0ZnpRdHJzTDc2MTdJMU53SDRoNXgwSExuKzJzVithc2FPRURRQzFBSj0=", encodings.UTF8)
+		      
+		      if not registerMBSPlugin(n, p, e, s+t) then  
+		        MsgBox "MBS Plugin serial not valid?"
+		        Exit  
+		      end if
+		      
 		      Dim prefsFile as FolderItem
 		      prefsFile = GetPrefsFile
 		      
@@ -385,6 +1257,99 @@ Inherits Application
 		  #EndIf
 		  
 		  Return success
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
+		Private Function MoveToBackup(in_file as FolderItem) As Boolean
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Dim success as Boolean
+		  
+		  Do 
+		    
+		    Try
+		      
+		      if in_file = nil then
+		        Log.LogError CurrentMethodName, "in_file is nil"
+		        Exit
+		      end if
+		      
+		      if not in_file.Exists then
+		        Log.LogError CurrentMethodName, "in_file does not exist"
+		        Exit
+		      end if
+		      
+		      Dim parentFolder as FolderItem
+		      parentFolder = in_file.Parent
+		      
+		      Dim fileNameExtension as String
+		      fileNameExtension = GetFileNameExtension(in_file.Name)
+		      
+		      Dim baseFileName as String
+		      if fileNameExtension = "" then
+		        baseFileName = in_file.Name
+		      else
+		        baseFileName = Left(in_file.Name, Len(in_file.Name) - Len(fileNameExtension) - 1)
+		        if baseFileName = "" then
+		          Log.LogError CurrentMethodName, "baseFileName is empty"
+		          Exit
+		        end if
+		      end if
+		      
+		      Dim backupFile as FolderItem
+		      Dim backupIdx as integer
+		      
+		      do
+		        
+		        backupIdx =  backupIdx + 1
+		        
+		        Dim backupFileName as String
+		        backupFileName = baseFileName + "." + Str(backupIdx) + "." + fileNameExtension
+		        
+		        backupFile = parentFolder.Child(backupFileName)
+		        
+		      loop until Not backupFile.Exists
+		      
+		      while backupIdx > 1
+		        
+		        Dim prvBackupFile as FolderItem
+		        prvBackupFile = backupFile
+		        
+		        backupIdx = backupIdx - 1
+		        
+		        Dim backupFileName as String
+		        backupFileName = baseFileName + "." + Str(backupIdx) + "." + fileNameExtension
+		        
+		        backupFile = parentFolder.Child(backupFileName)
+		        
+		        backupFile.MoveFileTo prvBackupFile
+		        
+		      wend
+		      
+		      in_file.MoveFileTo backupFile
+		      
+		      success = true
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		    End Try
+		    
+		  Loop Until true
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogExit CurrentMethodName
+		  #EndIf
+		  
+		  return success
 		End Function
 	#tag EndMethod
 
@@ -478,6 +1443,10 @@ Inherits Application
 
 	#tag Property, Flags = &h21
 		Private fSelectedScript As FolderItem
+	#tag EndProperty
+
+	#tag Property, Flags = &h21
+		Private fTemporaryDecompressedEPUB As FolderItem
 	#tag EndProperty
 
 

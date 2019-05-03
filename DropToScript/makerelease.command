@@ -6,7 +6,7 @@ fi
 export curDir=`dirname "$0"`
 cd $curDir
 export curDir=`pwd`
-rm -rf ../../ReleaseVersions/DropToScript.*.zip
+rm -rf ../ReleaseVersions/DropToScript.*.zip
 export version=`grep ShortVersion DropToScript.xojo_project | sed -e "s/ShortVersion=//"`
 if [ -d "$xojoHomeDir" ]; then
 	if [ -d "$curDir/Builds - DropToScript.xojo_project" ]; then

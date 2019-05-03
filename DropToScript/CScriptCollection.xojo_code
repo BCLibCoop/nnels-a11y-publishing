@@ -305,6 +305,29 @@ Protected Class CScriptCollection
 		            fScriptList.append scriptFile
 		          end if
 		        end if
+		        
+		        #if DebugBuild
+		          
+		          // Also scan a source DropToScript folder in git repo when debugging
+		          
+		          if scriptFile <> nil and scriptFile.Exists and scriptFile.Directory then
+		            Dim numSubFiles as integer
+		            numSubFiles = scriptFile.Count
+		            for subIdx as integer = 1 to numSubFiles
+		              Dim subScriptFile as FolderItem
+		              subScriptFile = scriptFile.TrueItem(subIdx)
+		              if subScriptFile <> nil and subScriptFile.Exists and not subScriptFile.Directory then
+		                Dim extension as String
+		                extension = Utils.GetFileNameExtension(subScriptFile.name)
+		                if prefs.GetScriptInterpreterPathByExtension(extension) <> "" then 
+		                  fScriptList.append subScriptFile
+		                end if
+		              end if
+		            next
+		          end if
+		          
+		        #endif
+		        
 		      next
 		      
 		      success = true

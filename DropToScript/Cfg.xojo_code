@@ -1,6 +1,6 @@
 #tag Class
 Protected Class Cfg
-	#tag Constant, Name = COMPANY_FOLDER_NAME, Type = String, Dynamic = False, Default = \"ca.nnels.a11y.publishing.dropphp", Scope = Public
+	#tag Constant, Name = COMPANY_FOLDER_NAME, Type = String, Dynamic = False, Default = \"ca.nnels.a11y.publishing.droptoscript", Scope = Public
 	#tag EndConstant
 
 	#tag Constant, Name = DISABLE_COMPILER_RUNTIME_CHECKS, Type = Boolean, Dynamic = False, Default = \"false", Scope = Public

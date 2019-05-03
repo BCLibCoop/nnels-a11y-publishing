@@ -80,6 +80,14 @@ function processDOM($config, &$isModified, &$dom) {
 
 }
 
+function preProcessFile($config, &$isModified, &$fileContents) {
+
+}
+
+function postProcessFile($config, &$isModified, &$fileContents) {
+
+}
+
 // -- AUTO-GENERATED CODE BELOW. DO NOT EDIT BELOW
 
 // Any code below this line will be auto-updated from the DropScriptTemplate.php. If this file is not
@@ -103,32 +111,35 @@ function main($droppedFile) {
                 break;
             }
 
+            $isModified = false;
+
+            $fileContents = file_get_contents($droppedFile);
+
+            preProcessFile($config, $isModified, $fileContents);
+
             $dom = new DomDocument();
 
             if ($config["ignoreDOMParserErrors"]) {
                 libxml_use_internal_errors(true);
             }
 
-            $dom->loadHTMLFile($droppedFile);
+            $dom->loadHTML($fileContents);
 
             if ($config["ignoreDOMParserErrors"]) {
                 libxml_clear_errors();
             }
-
-            $isModified = false;
             
             processDOM($config, $isModified, $dom);
 
-            // ...
-            //
+            $output = $dom->saveHTML();
+
+            postProcessFile($config, $isModified, $output);            
 
             if (! $isModified) {
                 break;
             }
 
             makeBackup($config, $droppedFile);
-
-            $output = $dom->saveHTML();
 
             writeFileContents($droppedFile, $output);
         }
@@ -150,7 +161,7 @@ function defaultConfig() {
 
     $config = [];
 
-    $config["acceptFileNameExtensions"] = [ "html", "htm", "xhtml", "xht" ];
+    $config["acceptFileNameExtensions"] = [ "html", "htm", "xhtml" ];
     $config["backupFileNameExtension"]  = "old";
     $config["maxBackupCount"]           = 5;
     $config["logLevel"]                 = LOG_NONE;
