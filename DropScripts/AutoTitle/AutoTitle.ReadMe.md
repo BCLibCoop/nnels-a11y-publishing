@@ -15,7 +15,7 @@ Example: if there is a file
 
 and it contains
 
-    &lt;title&gt;SomeFile&lt;/title&gt;
+    <title>SomeFile</title>
 
 it will be processed bu AutoTitle.html.
 
