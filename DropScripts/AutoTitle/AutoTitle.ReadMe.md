@@ -17,7 +17,7 @@ and it contains
 
     <title>SomeFile</title>
 
-it will be processed bu AutoTitle.html.
+it will be processed by AutoTitle.php.
 
 If the title is different, it won't be touched, unless you change the AutoTitle.config.txt 
 file.
