@@ -29,7 +29,7 @@ If still no suitable title can be found, it will look for the first &lt;p&gt; ta
 
 By default, the AutoTitle.php script will ignore subtags in the header. For example, if it finds:
 
-    &lt;h1&gt;&lt;span class="chapternumber"&gt;iii&lt;/span&gt;My Chapter&lt;/h1&gt;
+    <h1><span class="chapternumber">iii&</span>My Chapter</h1>
 
 then the title will be
 
