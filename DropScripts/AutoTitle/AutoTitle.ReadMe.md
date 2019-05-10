@@ -4,10 +4,10 @@
 
 AutoTitle.php is a command-line PHP script which can process an HTML file.
 
-It will look for the <title> tag. 
+It will look for the  &lt;title&gt; tag. 
 
-If the <title> tag matches the HTML file name, the script will try to find a 
-more suitable title and replace the <title> tag with it.
+If the  &lt;title&gt; tag matches the HTML file name, the script will try to find a 
+more suitable title and replace the  &lt;title&gt; tag with it.
 
 Example: if there is a file
 
@@ -15,21 +15,21 @@ Example: if there is a file
 
 and it contains
 
-    <title>SomeFile</title>
+    &lt;title&gt;SomeFile&lt;/title&gt;
 
 it will be processed bu AutoTitle.html.
 
 If the title is different, it won't be touched, unless you change the AutoTitle.config.txt 
 file.
 
-For a suitable title, the script will look for the first <h1> tag. If no <h1> tag can be found
-it will try <h2>, then <h3>...
+For a suitable title, the script will look for the first &lt;h1&gt; tag. If no &lt;h1&gt; tag can be found
+it will try &lt;h2&gt;, then &lt;h3&gt;...
 
-If still no suitable title can be found, it will look for the first <p> tag.
+If still no suitable title can be found, it will look for the first &lt;p&gt; tag.
 
 By default, the AutoTitle.php script will ignore subtags in the header. For example, if it finds:
 
-    <h1><span class="chapternumber">iii</span>My Chapter</h1>
+    &lt;h1&gt;&lt;span class="chapternumber"&gt;iii&lt;/span&gt;My Chapter&lt;/h1&gt;
 
 then the title will be
 
@@ -99,7 +99,7 @@ If maxBackupCount is 0, no backups are made
 
 If maxBackupCount is greater than zero the backups will be
 
-    SomeFile.xhtml ->
+    SomeFile.xhtml -&gt;
         SomeFile.xhtml.old
         SomeFile.xhtml_1.old
         SomeFile.xhtml_2.old
