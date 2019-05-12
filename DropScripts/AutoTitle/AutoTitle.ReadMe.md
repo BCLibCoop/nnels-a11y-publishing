@@ -42,6 +42,8 @@ or override configuration options.
 
 The names of these options are case-sensitive.
 
+Make sure the various options are separated with commas: all option-containing lines should end in a comma, except for the last one.
+
 ### acceptFileNameExtensions
 
 Optional. The script will ignore any files whose file name does not end in one of the listed extensions
