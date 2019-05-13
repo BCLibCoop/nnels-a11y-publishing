@@ -1,4 +1,5 @@
 {
-	"forcedReplaceTitle": 0,
-	"keepTitleSubtags":   0
+	"forcedReplaceTitle":     1,
+	"keepTitleSubtags":       1,
+	"addSpaceBetweenSubTags": 1
 }

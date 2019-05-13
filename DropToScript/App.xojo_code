@@ -123,6 +123,38 @@ Inherits Application
 		End Sub
 	#tag EndMethod
 
+	#tag Method, Flags = &h0
+		Sub AddToReport(in_message as String)
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Do 
+		    
+		    Try
+		      
+		      fReport = fReport + in_message + EndOfLine
+		      WndReport.ShowReportLine in_message
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		    End Try
+		    
+		  Loop Until true
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogExit CurrentMethodName
+		  #EndIf
+		  
+		End Sub
+	#tag EndMethod
+
 	#tag Method, Flags = &h21
 		Private Function CleanupFolderContent(in_folder as FolderItem, in_folderContentDict as Dictionary) As Boolean
 		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
@@ -657,13 +689,23 @@ Inherits Application
 		      end if
 		      
 		      if fSelectedScript <> nil and UBound(fDocumentQueue) >= 0 then
+		        
+		        AddToReport "Using script " + fSelectedScript.Name
+		        
 		        success = true
 		        for idx as integer = 0 to UBound(fDocumentQueue)
 		          Dim droppedFile as FolderItem
 		          droppedFile = fDocumentQueue(idx)
-		          success = HandleDroppedFile(droppedFile) and success
+		          Dim fileSuccess as Boolean
+		          fileSuccess = HandleDroppedFile(droppedFile)
+		          if fileSuccess then
+		            AddToReport "Success: processed " + droppedFile.Name
+		          else
+		            AddToReport "Failure: attempted to process " + droppedFile.Name
+		          end if
+		          success = fileSuccess and success
 		        next
-		        Quit
+		        ReportAndQuit
 		        Exit
 		      end if
 		      
@@ -672,17 +714,27 @@ Inherits Application
 		        if not success then
 		          Log.LogError CurrentMethodName, "failed to manage prefs"
 		        end if
-		        Quit
+		        ReportAndQuit
 		        Exit
 		      end if
 		      
 		      fSelectedScript = WndSelectScript.ChooseScript
 		      success = true
 		      if fSelectedScript <> nil then
+		        
+		        AddToReport "Using script " + fSelectedScript.Name
+		        
 		        for idx as integer = 0 to UBound(fDocumentQueue)
 		          Dim droppedFile as FolderItem
 		          droppedFile = fDocumentQueue(idx)
-		          success = HandleDroppedFile(droppedFile) and success
+		          Dim fileSuccess as Boolean
+		          fileSuccess = HandleDroppedFile(droppedFile)
+		          if fileSuccess then
+		            AddToReport "Success: processed " + droppedFile.Name
+		          else
+		            AddToReport "Failure: attempted to process " + droppedFile.Name
+		          end if
+		          success = fileSuccess and success
 		        next
 		      end if
 		      
@@ -690,7 +742,7 @@ Inherits Application
 		        Log.LogError CurrentMethodName, "failed to handle all dropped files"
 		      end if
 		      
-		      Quit
+		      ReportAndQuit
 		      
 		    Catch e As RuntimeException
 		      if not e isa EndException then
@@ -962,6 +1014,8 @@ Inherits Application
 		        Exit
 		      end if
 		      
+		      AddToReport "Handling EPUB file " + in_epubFile.Name
+		      
 		      if fTemporaryDecompressedEPUB = nil then
 		        fTemporaryDecompressedEPUB = GetTemporaryFolderItem()
 		      end if
@@ -1012,24 +1066,39 @@ Inherits Application
 		        Exit
 		      end if
 		      
+		      success = true
+		      
 		      for each targetFile as FolderItem in targetFiles
-		        if not HandleDroppedFile(targetFile) then
+		        Dim fileSuccess as Boolean
+		        fileSuccess = HandleDroppedFile(targetFile)
+		        if fileSuccess then
+		          AddToReport "Success: processed " + targetFile.Name
+		        else
+		          AddToReport "Failure: attempted to process " + targetFile.Name
+		        end if
+		        
+		        if not fileSuccess then
 		          Log.LogError CurrentMethodName, "failed to process " + targetFile.NativePath
 		        end if
+		        success = fileSuccess and success
+		        
 		      next
 		      
 		      if not CleanupFolderContent(fTemporaryDecompressedEPUB, beforeContentDict) then
 		        Log.LogError CurrentMethodName, "cannot clean up backup files"
+		        success = false
 		        Exit
 		      end if
 		      
 		      if not MoveToBackup(in_epubFile) then
 		        Log.LogError CurrentMethodName, "failed to backup old EPUB"
+		        success = false
 		        Exit
 		      end if
 		      
 		      if not ConvertToEPUB(fTemporaryDecompressedEPUB, in_epubFile) then
 		        Log.LogError CurrentMethodName, "failed to recompress EPUB"
+		        success = false
 		        Exit
 		      end if
 		      
@@ -1067,6 +1136,10 @@ Inherits Application
 		  Loop Until True
 		  
 		  recursiveEPUB = prvRecursiveEPUB
+		  
+		  if not success then
+		    AddToReport "Failed to process EPUB file"
+		  end if
 		  
 		  #If Cfg.IS_ENTRY_EXIT_LOGGING
 		    Log.LogEntry CurrentMethodName
@@ -1166,7 +1239,7 @@ Inherits Application
 		      Dim output as String
 		      output = Trim(sh.ReadAll)
 		      if output <> "" then
-		        MsgBox output
+		        AddToReport EndOfLine + output
 		      end if
 		      
 		      success = true
@@ -1313,21 +1386,24 @@ Inherits Application
 		        backupIdx =  backupIdx + 1
 		        
 		        Dim backupFileName as String
-		        backupFileName = baseFileName + "." + Str(backupIdx) + "." + fileNameExtension
+		        backupFileName = baseFileName + ".old." + Str(backupIdx) + "." + fileNameExtension
 		        
 		        backupFile = parentFolder.Child(backupFileName)
 		        
-		      loop until Not backupFile.Exists
+		      loop until Not backupFile.Exists and backupIdx < Cfg.MAX_BACKUPS
 		      
-		      while backupIdx > 1
+		      while backupIdx > 2
 		        
 		        Dim prvBackupFile as FolderItem
 		        prvBackupFile = backupFile
+		        if prvBackupFile.Exists then
+		          prvBackupFile.Delete
+		        end if
 		        
 		        backupIdx = backupIdx - 1
 		        
 		        Dim backupFileName as String
-		        backupFileName = baseFileName + "." + Str(backupIdx) + "." + fileNameExtension
+		        backupFileName = baseFileName + ".old." + Str(backupIdx) + "." + fileNameExtension
 		        
 		        backupFile = parentFolder.Child(backupFileName)
 		        
@@ -1420,6 +1496,45 @@ Inherits Application
 		End Sub
 	#tag EndMethod
 
+	#tag Method, Flags = &h21
+		Private Sub ReportAndQuit()
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Do 
+		    
+		    Try
+		      
+		      if fReport <> "" then
+		        WndReport.ShowReport fReport
+		      end if
+		      Quit
+		      
+		    Catch e As RuntimeException
+		      if not e isa EndException then
+		        Log.LogError CurrentMethodName, "throws " + e.Message
+		      end if
+		    End Try
+		    
+		  Loop Until True
+		  
+		  
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  
+		End Sub
+	#tag EndMethod
+
 
 	#tag Property, Flags = &h21
 		Private fDocumentQueue() As FolderItem
@@ -1435,6 +1550,10 @@ Inherits Application
 
 	#tag Property, Flags = &h21
 		Private fPrefs As CPrefs
+	#tag EndProperty
+
+	#tag Property, Flags = &h21
+		Private fReport As String
 	#tag EndProperty
 
 	#tag Property, Flags = &h21

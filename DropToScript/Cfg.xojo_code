@@ -21,6 +21,9 @@ Protected Class Cfg
 	#tag Constant, Name = IS_ENTRY_EXIT_LOGGING, Type = Boolean, Dynamic = False, Default = \"false", Scope = Public
 	#tag EndConstant
 
+	#tag Constant, Name = MAX_BACKUPS, Type = Double, Dynamic = False, Default = \"5", Scope = Public
+	#tag EndConstant
+
 	#tag Constant, Name = MAX_FILE_NAME_EXTENSION_LEN, Type = Double, Dynamic = False, Default = \"10", Scope = Public
 	#tag EndConstant
 

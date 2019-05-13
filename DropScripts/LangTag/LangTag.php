@@ -152,6 +152,148 @@ function main($droppedFile) {
 
 }
 
+define("JSON_PARSE_STATE_IDLE",                      0);
+define("JSON_PARSE_STATE_SEEN_SLASH",                1);
+define("JSON_PARSE_STATE_SEEN_DOUBLE_SLASH",         2);
+define("JSON_PARSE_STATE_SEEN_SLASH_STAR",           3);
+define("JSON_PARSE_STATE_SEEN_SLASH_STAR_STAR",      4);
+define("JSON_PARSE_STATE_SEEN_SINGLE_QUOTE",         5);
+define("JSON_PARSE_STATE_SEEN_SINGLE_QUOTE_ESCAPE",  6);
+define("JSON_PARSE_STATE_SEEN_DOUBLE_QUOTE",         7);
+define("JSON_PARSE_STATE_SEEN_DOUBLE_QUOTE_ESCAPE",  8);
+
+function commented_json_decode($in_json) {
+
+    logEntry("commented_json_decode");
+
+    do { // non-loop
+
+        try {
+
+            if (! $in_json) {
+                logNote("commented_json_decode: no in_json");
+                break;
+            }
+
+            $state = JSON_PARSE_STATE_IDLE;
+            $charPos = 0;
+            $len = strlen($in_json);
+            $decoded_json = "";
+            while ($charPos < $len) {
+
+                $c = $in_json[$charPos];
+                $charPos++;
+                switch ($state) {
+
+                    case JSON_PARSE_STATE_IDLE: {
+                        if ($c == "/") {
+                            $state = JSON_PARSE_STATE_SEEN_SLASH;
+                        }
+                        else if ($c == "\"") {
+                            $decoded_json .= $c;
+                            $state = JSON_PARSE_STATE_SEEN_DOUBLE_QUOTE;
+                        }
+                        else if ($c == "'") {
+                            $decoded_json .= $c;
+                            $state = JSON_PARSE_STATE_SEEN_SINGLE_QUOTE;
+                        }
+                        else {
+                            $decoded_json .= $c;
+                        }
+                    }
+                    break;
+
+                    case JSON_PARSE_STATE_SEEN_SLASH: {
+                        if ($c == "/") {
+                            $state = JSON_PARSE_STATE_SEEN_DOUBLE_SLASH;
+                        }
+                        else if ($c == "*") {
+                            $state = JSON_PARSE_STATE_SEEN_SLASH_STAR;
+                        }
+                        else {
+                            $decoded_json .= "/" . $c;
+                            $state = JSON_PARSE_STATE_IDLE;                            
+                        }
+                    }
+                    break;
+
+                    case JSON_PARSE_STATE_SEEN_DOUBLE_SLASH: {
+                        if ($c == "\n" || c == "\r") {
+                            $decoded_json .= $c;
+                            $state = JSON_PARSE_STATE_IDLE;
+                        }
+                    }
+                    break;
+
+                    case JSON_PARSE_STATE_SEEN_SLASH_STAR: {
+                        if ($c == "*") {
+                            $state = JSON_PARSE_STATE_SEEN_SLASH_STAR_STAR;
+                        }
+                    }
+                    break;
+
+                    case JSON_PARSE_STATE_SEEN_SLASH_STAR_STAR: {
+                        if ($c == "/") {
+                            $state = JSON_PARSE_STATE_IDLE;
+                        }
+                        else {
+                            $state = JSON_PARSE_STATE_SEEN_SLASH_STAR;
+                        }
+                    }
+                    break;
+
+                    case JSON_PARSE_STATE_SEEN_SINGLE_QUOTE: {
+                        $decoded_json .= $c;
+                        if ($c == "'") {
+                            $state = JSON_PARSE_STATE_IDLE;
+                        }
+                        else if ($c == "\\") {
+                            $state = JSON_PARSE_STATE_SEEN_SINGLE_QUOTE_ESCAPE;
+                        }
+                    }
+                    break;
+
+                    case JSON_PARSE_STATE_SEEN_SINGLE_QUOTE_ESCAPE: {
+                        $decoded_json .= $c;
+                        $state = JSON_PARSE_STATE_SEEN_SINGLE_QUOTE;
+                    }
+                    break;
+
+                    case JSON_PARSE_STATE_SEEN_DOUBLE_QUOTE: {
+                        $decoded_json .= $c;
+                        if ($c == "\"") {
+                            $state = JSON_PARSE_STATE_IDLE;
+                        }
+                        else if ($c == "\\") {
+                            $state = JSON_PARSE_STATE_SEEN_DOUBLE_QUOTE_ESCAPE;
+                        }
+                    }
+                    break;
+
+                    case JSON_PARSE_STATE_SEEN_DOUBLE_QUOTE_ESCAPE: {
+                        $decoded_json .= $c;
+                        $state = JSON_PARSE_STATE_SEEN_DOUBLE_QUOTE;
+                    }
+                    break;
+                }
+            }
+
+            logNote("commented_json_decode: decoded = \n" . $decoded_json);
+
+            $retVal = $decoded_json;
+
+        }
+        catch (Exception $e) {
+            logError("commented_json_decode: throws " . $e->getMessage());
+        }
+    }
+    while (false); // non-loop
+
+    logExit("commented_json_decode");
+
+    return $retVal;
+}
+
 define("LOG_NONE",    0);
 define("LOG_ERROR",   1);
 define("LOG_WARNING", 2);
@@ -416,12 +558,15 @@ function mergeConfig(&$config, $filePath) {
                 logNote("mergeConfig: no data retrieved from " . $filePath);
                 break;
             }
-            logNote("mergeConfig: mergeConfigJSON = \n" . $mergeConfigJSON);
+
+            $mergeConfigJSON = commented_json_decode($mergeConfigJSON);
 
             $mergeConfig = json_decode($mergeConfigJSON);
-            foreach ($mergeConfig as $key => $value) {
-                logNote("mergeConfig: merging [" . $key . "] = \"" . $value . "\"");
-                $config[$key] = $value;
+            if (isset($mergeConfig)) {
+                foreach ($mergeConfig as $key => $value) {
+                    logNote("mergeConfig: merging [" . $key . "] = \"" . $value . "\"");
+                    $config[$key] = $value;
+                }
             }
         }
         catch (Exception $e) {

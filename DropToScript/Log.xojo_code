@@ -96,10 +96,14 @@ Protected Class Log
 		    Dim now as Date
 		    now = new Date
 		    
-		    tos.WriteLine now.ShortTime + ":" +  in_message
+		    Dim logLine as String
+		    logLine = now.ShortTime + ":" +  in_message
+		    
+		    tos.WriteLine logLine
 		    
 		    tos.close
 		    
+		    App.AddToReport logLine
 		  Loop Until true
 		  
 		End Sub
@@ -159,7 +163,7 @@ Protected Class Log
 	#tag EndProperty
 
 	#tag Property, Flags = &h1
-		Protected Shared fLogLevel As Integer = 2
+		Protected Shared fLogLevel As Integer = 4
 	#tag EndProperty
 
 
