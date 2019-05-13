@@ -17,27 +17,7 @@ function processDOM($config, &$isModified, &$dom) {
                 $header = "h" . $headerLevel;
                 $headers = $dom->getElementsByTagName($header);
                 if (count($headers) > 0) {
-                    if ($config["keepTitleSubtags"]) {
-                        $firstHeader = $headers->item(0)->textContent;
-                    }
-                    else {
-                        if (isset($headers->item(0)->childNodes)) {
-                            foreach($headers->item(0)->childNodes as $node) {
-                                if ($node->nodeType != XML_TEXT_NODE) {
-                                    continue;
-                                }
-                                $addContent = $node->textContent;
-                                if ($addContent) {
-                                    if ($config["addSpaceBetweenSubTags"]) {
-                                        if ($firstHeader) {
-                                            $firstHeader .= " ";
-                                        }
-                                    }
-                                    $firstHeader .= $addContent;
-                                }
-                            }
-                        }
-                    }
+                    $firstHeader = getNodeText($config, $headers->item(0));
                 }
                 $headerLevel++;
             }
@@ -47,27 +27,7 @@ function processDOM($config, &$isModified, &$dom) {
                 $paraCount = $paragraphs->length;
                 $paraIdx = 0;
                 while ($paraIdx < $paraCount && ! $firstHeader) {
-                    if ($config["keepTitleSubtags"]) {
-                        $firstHeader = $paragraphs->item($paraIdx)->textContent;
-                    }
-                    else {
-                        if (isset($paragraphs->item($paraIdx)->childNodes)) {
-                            foreach($paragraphs->item($paraIdx)->childNodes as $node) {
-                                if ($node->nodeType != XML_TEXT_NODE) {
-                                    continue;
-                                }
-                                $addContent = $node->textContent;
-                                if ($addContent) {
-                                    if ($config["addSpaceBetweenSubTags"]) {
-                                        if ($firstHeader) {
-                                            $firstHeader .= " ";
-                                        }
-                                    }
-                                    $firstHeader .= $addContent;
-                                }
-                            }
-                        }
-                    }
+                    $firstHeader = getNodeText($config, $paragraphs->item($paraIdx));
                     $paraIdx++;
                 }
             }
@@ -106,7 +66,10 @@ function processDOM($config, &$isModified, &$dom) {
             }
 
             logNote("processDOM: Replacing  '" . $oldTitle . "' with '" . $newTitle . "'");
-            $title->textContent = $newTitle;
+            // Older versions of PHP (pre 5.6) have textContent read-only
+            // https://www.php.net/manual/en/class.domnode.php#95545
+            $title->removeChild($title->firstChild);
+            $title->appendChild(new DOMText($newTitle));
             $isModified = true;
         }
         catch (Exception $e) {
@@ -126,6 +89,58 @@ function preProcessFile($config, &$isModified, &$fileContents) {
 function postProcessFile($config, &$isModified, &$fileContents) {
 
 }
+
+function getNodeText($config, $node) {
+
+    $retVal = "";
+
+    logEntry("getNodeText");
+
+    do { // non-loop
+
+        try {
+
+            if (! $config["keepTitleSubtags"]) {
+                $retVal = $node->textContent;
+                break;
+            }
+            
+            if (! isset($node->childNodes)) {
+                $retVal = $node->textContent;
+                break;
+            }
+
+            foreach ($node->childNodes as $childNode) {
+
+                if ($childNode->nodeType != XML_TEXT_NODE) {
+                    $addContent = getNodeText($config, $childNode);
+                }
+                else {
+                    $addContent = $childNode->textContent;
+                }
+
+                if (isset($addContent) && $addContent != "") {
+                    if ($config["addSpaceBetweenSubTags"]) {
+                        if ($retVal) {
+                            $retVal .= " ";
+                        }
+                    }
+                    $retVal .= $addContent;
+                }
+            }
+        }
+        catch (Exception $e) {
+            logError("getNodeText: throws " . $e->getMessage());
+        }
+    }
+    while (false); // non-loop
+
+    logExit("getNodeText");
+
+    return $retVal;
+
+}
+
 
 // -- AUTO-GENERATED CODE BELOW. DO NOT EDIT BELOW
 
