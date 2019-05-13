@@ -50,7 +50,7 @@ Begin Window WndPrefs
       TabPanelIndex   =   0
       TabStop         =   True
       Text            =   "System Paths:"
-      TextAlign       =   0
+      TextAlign       =   2
       TextColor       =   &c00000000
       TextFont        =   "System"
       TextSize        =   0.0
@@ -85,7 +85,7 @@ Begin Window WndPrefs
       TabPanelIndex   =   0
       TabStop         =   True
       Text            =   "Default Script:"
-      TextAlign       =   0
+      TextAlign       =   2
       TextColor       =   &c00000000
       TextFont        =   "System"
       TextSize        =   0.0
@@ -210,7 +210,7 @@ Begin Window WndPrefs
       GridLinesVertical=   0
       HasHeading      =   True
       HeadingIndex    =   0
-      Height          =   141
+      Height          =   137
       HelpTag         =   ""
       Hierarchical    =   False
       Index           =   -2147483648
@@ -282,7 +282,7 @@ Begin Window WndPrefs
       TextFont        =   "System"
       TextSize        =   0.0
       TextUnit        =   0
-      Top             =   204
+      Top             =   202
       Transparent     =   False
       Underline       =   False
       Value           =   False
@@ -327,12 +327,79 @@ Begin Window WndPrefs
       TextFont        =   "System"
       TextSize        =   0.0
       TextUnit        =   0
-      Top             =   204
+      Top             =   202
       Transparent     =   False
       Underline       =   False
       Value           =   False
       Visible         =   True
       Width           =   26
+   End
+   Begin Label LblLogLevel
+      AutoDeactivate  =   True
+      Bold            =   False
+      DataField       =   ""
+      DataSource      =   ""
+      Enabled         =   True
+      Height          =   20
+      HelpTag         =   ""
+      Index           =   -2147483648
+      InitialParent   =   ""
+      Italic          =   False
+      Left            =   20
+      LockBottom      =   False
+      LockedInPosition=   False
+      LockLeft        =   True
+      LockRight       =   False
+      LockTop         =   True
+      Multiline       =   False
+      Scope           =   2
+      Selectable      =   False
+      TabIndex        =   14
+      TabPanelIndex   =   0
+      TabStop         =   True
+      Text            =   "Log Level:"
+      TextAlign       =   2
+      TextColor       =   &c00000000
+      TextFont        =   "System"
+      TextSize        =   0.0
+      TextUnit        =   0
+      Top             =   230
+      Transparent     =   False
+      Underline       =   False
+      Visible         =   True
+      Width           =   100
+   End
+   Begin PopupMenu PupLogLevel
+      AutoDeactivate  =   True
+      Bold            =   False
+      DataField       =   ""
+      DataSource      =   ""
+      Enabled         =   True
+      Height          =   20
+      HelpTag         =   ""
+      Index           =   -2147483648
+      InitialParent   =   ""
+      InitialValue    =   ""
+      Italic          =   False
+      Left            =   132
+      ListIndex       =   0
+      LockBottom      =   False
+      LockedInPosition=   False
+      LockLeft        =   True
+      LockRight       =   False
+      LockTop         =   True
+      Scope           =   2
+      TabIndex        =   15
+      TabPanelIndex   =   0
+      TabStop         =   True
+      TextFont        =   "System"
+      TextSize        =   0.0
+      TextUnit        =   0
+      Top             =   229
+      Transparent     =   False
+      Underline       =   False
+      Visible         =   True
+      Width           =   124
    End
 End
 #tag EndWindow
@@ -629,12 +696,20 @@ End
 		    
 		    Try
 		      
+		      PupLogLevel.AddRow "None"
+		      PupLogLevel.AddRow "Error"
+		      PupLogLevel.AddRow "Warning"
+		      PupLogLevel.AddRow "Note"
+		      PupLogLevel.AddRow "Trace"
+		      
 		      Dim prefs as CPrefs
 		      prefs = App.GetPrefs
 		      if prefs = nil then
 		        Log.LogError CurrentMethodName, "prefs is nil"
 		        Exit
 		      end if
+		      
+		      PupLogLevel.ListIndex = prefs.GetPrefsLogLevel
 		      
 		      Dim defaultScriptName as String
 		      defaultScriptName = prefs.GetDefaultScriptName
@@ -862,6 +937,15 @@ End
 		        end if
 		      end if
 		      
+		      Dim logLevel as integer
+		      logLevel = PupLogLevel.ListIndex
+		      
+		      success = prefs.SetPrefsLogLevel(logLevel)
+		      if not success then
+		        Log.LogError CurrentMethodName, "failed to set log level"
+		        Exit
+		      end if
+		      
 		      success = prefs.SetDefaultScriptName(defaultScriptName)
 		      if not success then
 		        Log.LogError CurrentMethodName, "failed to set default script name"
@@ -902,6 +986,7 @@ End
 		        Exit
 		      end if
 		      
+		      
 		    Catch e As RuntimeException
 		      Log.LogError CurrentMethodName, "throws " + e.Message
 		    End Try
@@ -938,6 +1023,8 @@ End
 		      else
 		        BtnRemovePath.Enabled = false
 		      end if
+		      
+		      PupLogLevel.ListIndex = Log.GetLogLevel
 		      
 		    Catch e As RuntimeException
 		      Log.LogError CurrentMethodName, "throws " + e.Message

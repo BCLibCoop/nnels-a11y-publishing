@@ -1304,6 +1304,8 @@ Inherits Application
 		        Exit
 		      end if
 		      
+		      Log.SetLogLevel fPrefs.GetPrefsLogLevel
+		      
 		      fScriptCollection = CScriptCollection.Factory
 		      if fScriptCollection = nil then
 		        Log.LogError CurrentMethodName, "failed to create fScriptCollection"
@@ -1445,7 +1447,7 @@ Inherits Application
 		    
 		    Try
 		      
-		      Log.SetLogLevel Log.WARNING
+		      Log.SetLogLevel Log.NONE
 		      
 		      fFinalizeStartupTimer = new CFinalizeStartupTimer
 		      fFinalizeStartupTimer.Period = 1000

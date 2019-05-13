@@ -44,6 +44,12 @@ Protected Class Log
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
+		Shared Function GetLogLevel() As Integer
+		  return fLogLevel
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
 		Shared Sub LogEntry(in_methodName as String)
 		  if fLogLevel >= Log.TRACE then
 		    LogMessage "ENTRY  : " + in_methodName

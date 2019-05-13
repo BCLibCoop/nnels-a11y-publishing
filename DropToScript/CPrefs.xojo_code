@@ -16,6 +16,7 @@ Protected Class CPrefs
 		    
 		    Try
 		      
+		      fLogLevel = 0
 		      fDefaultScriptName = ""
 		      fTargetFileNameExtensions = kDefaultTargetFileNameExtensions
 		      fDirty = false
@@ -234,6 +235,40 @@ Protected Class CPrefs
 		      end if
 		      
 		      retVal = extension
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		    End Try
+		    
+		  Loop Until True
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  return retVal
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Function GetPrefsLogLevel() As Integer
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  Dim retVal as Integer
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Do 
+		    
+		    Try
+		      
+		      retVal = fLogLevel
 		      
 		    Catch e As RuntimeException
 		      Log.LogError CurrentMethodName, "throws " + e.Message
@@ -503,6 +538,8 @@ Protected Class CPrefs
 		          
 		          if outOfBandLineIdx = 0 then
 		            fTargetFileNameExtensions = line
+		          elseif outOfBandLineIdx = 1 then
+		            fLogLevel = Val(line)
 		          end if
 		          
 		          outOfBandLineIdx = outOfBandLineIdx + 1
@@ -583,6 +620,7 @@ Protected Class CPrefs
 		      
 		      tos.WriteLine fDefaultScriptName
 		      tos.WriteLine kOutOfBandPrefix + fTargetFileNameExtensions
+		      tos.WriteLine kOutOfBandPrefix + Str(fLogLevel)
 		      
 		      Dim extensions() as Variant
 		      extensions = fScriptInterpreterPathsByExtension.Keys
@@ -674,6 +712,44 @@ Protected Class CPrefs
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
+		Function SetPrefsLogLevel(in_logLevel as integer) As Boolean
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  Dim success as Boolean
+		  success = true
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Do 
+		    
+		    Try
+		      
+		      fDirty = fDirty or (fLogLevel <> in_logLevel)
+		      
+		      fLogLevel = in_logLevel
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		    End Try
+		    
+		  Loop Until True
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  return success
+		  
+		End Function
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
 		Function SetScriptInterpreterPath(in_extension as String, in_scriptInterpreterPath as String) As Boolean
 		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
 		    #Pragma DisableBoundsChecking
@@ -738,6 +814,10 @@ Protected Class CPrefs
 
 	#tag Property, Flags = &h21
 		Private fDirty As Boolean
+	#tag EndProperty
+
+	#tag Property, Flags = &h21
+		Private fLogLevel As Integer
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
