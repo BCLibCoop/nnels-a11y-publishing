@@ -58,15 +58,36 @@ function main($droppedFile) {
                 libxml_use_internal_errors(true);
             }
 
-            $dom->loadHTML($fileContents);
+            $header = "";
+            $contents = $fileContents;
+
+            $regExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>))*)([\s\S]*)/s";
+            $matches = [];
+            if (preg_match($regExp, $fileContents, $matches)) {
+                $header = $matches[1];
+                $contents = $matches[5];
+            }
+
+            $dom->loadHTML($contents);
 
             if ($config["ignoreDOMParserErrors"]) {
                 libxml_clear_errors();
             }
             
-            processDOM($config, $isModified, $dom);
+            $isDomModified = false;
+            processDOM($config, $isDomModified, $dom);
 
-            $output = $dom->saveHTML();
+            $isModified = $isModified || $isDomModified;
+
+            if (! $isDomModified) {
+                $output = $fileContents;
+            }
+            else {
+                $output = $dom->saveHTML();         
+                if (preg_match($regExp, $output, $matches)) {
+                    $output = $header . $matches[5];
+                }
+            }
 
             postProcessFile($config, $isModified, $output);            
 
@@ -77,6 +98,9 @@ function main($droppedFile) {
             makeBackup($config, $droppedFile);
 
             writeFileContents($droppedFile, $output);
+
+            echo "Updated file " . basename($droppedFile) . "\n";
+            
         }
         catch (Exception $e) {
             logError("main: throws " . $e->getMessage());
@@ -466,7 +490,7 @@ function makeBackup($config, $filePath) {
                 break;
             }
 
-            rename($filePath, $backupFile);
+            copy($filePath, $backupFile);
 
             logNote("makeBackup: backup made to " . $backupFile);
         }
