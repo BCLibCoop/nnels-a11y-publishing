@@ -69,11 +69,16 @@ function main($droppedFile) {
             $header = "";
             $contents = $fileContents;
 
-            $regExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>))*)([\s\S]*)/s";
+            $contentRegExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>))*)([\s\S]*)/s";
             $matches = [];
-            if (preg_match($regExp, $fileContents, $matches)) {
-                $header = $matches[1];
+            if (preg_match($contentRegExp, $fileContents, $matches)) {
                 $contents = $matches[5];
+            }
+
+            $headerRegExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>)|(\s*<\s*html[^>]*>))*\s*)([\s\S]*)/si";
+            $matches = [];
+            if (preg_match($headerRegExp, $fileContents, $matches)) {
+                $header = $matches[1];
             }
 
             $dom->loadHTML($contents);
@@ -92,8 +97,8 @@ function main($droppedFile) {
             }
             else {
                 $output = $dom->saveHTML();         
-                if (preg_match($regExp, $output, $matches)) {
-                    $output = $header . $matches[5];
+                if (preg_match($headerRegExp, $output, $matches)) {
+                    $output = $header . $matches[6];
                 }
             }
 

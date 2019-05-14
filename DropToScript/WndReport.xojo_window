@@ -40,11 +40,11 @@ Begin Window WndReport
       InitialParent   =   ""
       Italic          =   False
       Left            =   500
-      LockBottom      =   False
+      LockBottom      =   True
       LockedInPosition=   False
-      LockLeft        =   True
-      LockRight       =   False
-      LockTop         =   True
+      LockLeft        =   False
+      LockRight       =   True
+      LockTop         =   False
       Scope           =   2
       TabIndex        =   1
       TabPanelIndex   =   0
