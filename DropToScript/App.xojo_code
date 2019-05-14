@@ -1413,7 +1413,7 @@ Inherits Application
 		        
 		      wend
 		      
-		      in_file.MoveFileTo backupFile
+		      in_file.CopyFileTo backupFile
 		      
 		      success = true
 		      

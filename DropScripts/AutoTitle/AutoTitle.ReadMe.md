@@ -101,7 +101,7 @@ If maxBackupCount is 0, no backups are made
 
 If maxBackupCount is greater than zero the backups will be
 
-    SomeFile.xhtml -&gt;
+    SomeFile.xhtml ->
         SomeFile.xhtml.old
         SomeFile.xhtml_1.old
         SomeFile.xhtml_2.old
@@ -112,5 +112,5 @@ The SomeFile.xhtml.old is special: once made, it is never overwritten. It
 stores the content of the original file from before you ran the script for the 
 first time.
 
-SomeFile.xhtml_1.old, SomeFile.xhtml_2.old... rotate. The _1 file is the latest,
-the _5 file is the oldest.
+SomeFile.xhtml&lowbar;1.old, SomeFile.xhtml&lowbar;2.old... rotate. The &lowbar;1 file is the latest,
+the &lowbar;5 file is the oldest.
