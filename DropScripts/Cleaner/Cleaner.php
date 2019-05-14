@@ -86,13 +86,20 @@ function main($droppedFile) {
             $header = "";
             $contents = $fileContents;
 
-            $regExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>))*)([\s\S]*)/s";
+            $contentRegExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>))*)([\s\S]*)/s";
             $matches = [];
-            if (preg_match($regExp, $fileContents, $matches)) {
-                $header = $matches[1];
+            if (preg_match($contentRegExp, $fileContents, $matches)) {
                 $contents = $matches[5];
             }
 
+            $headerRegExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>)|(\s*<\s*html[^>]*>))*\s*)([\s\S]*)/si";
+            $matches = [];
+            if (preg_match($headerRegExp, $fileContents, $matches)) {
+                $header = $matches[1];
+            }
+
+            $contents = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" . $contents;
+            
             $dom->loadHTML($contents);
 
             if ($config["ignoreDOMParserErrors"]) {
@@ -108,15 +115,16 @@ function main($droppedFile) {
                 $output = $fileContents;
             }
             else {
-                $output = $dom->saveHTML();         
-                if (preg_match($regExp, $output, $matches)) {
-                    $output = $header . $matches[5];
+                $output = $dom->saveXML($dom);         
+                if (preg_match($headerRegExp, $output, $matches)) {
+                    $output = $header . $matches[6];
                 }
             }
 
             postProcessFile($config, $isModified, $output);            
 
             if (! $isModified) {
+                echo "File " . basename($droppedFile) . " was not modified.\n";
                 break;
             }
 
@@ -124,7 +132,7 @@ function main($droppedFile) {
 
             writeFileContents($droppedFile, $output);
 
-            echo "Updated file " . basename($droppedFile) . "\n";
+            echo "Updated file " . basename($droppedFile) . ".\n";
             
         }
         catch (Exception $e) {

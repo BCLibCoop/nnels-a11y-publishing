@@ -138,6 +138,8 @@ function main($droppedFile) {
                 $header = $matches[1];
             }
 
+            $contents = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" . $contents;
+            
             $dom->loadHTML($contents);
 
             if ($config["ignoreDOMParserErrors"]) {
@@ -153,7 +155,7 @@ function main($droppedFile) {
                 $output = $fileContents;
             }
             else {
-                $output = $dom->saveHTML();         
+                $output = $dom->saveXML($dom);         
                 if (preg_match($headerRegExp, $output, $matches)) {
                     $output = $header . $matches[6];
                 }
@@ -162,6 +164,7 @@ function main($droppedFile) {
             postProcessFile($config, $isModified, $output);            
 
             if (! $isModified) {
+                echo "File " . basename($droppedFile) . " was not modified.\n";
                 break;
             }
 
@@ -169,7 +172,7 @@ function main($droppedFile) {
 
             writeFileContents($droppedFile, $output);
 
-            echo "Updated file " . basename($droppedFile) . "\n";
+            echo "Updated file " . basename($droppedFile) . ".\n";
             
         }
         catch (Exception $e) {
