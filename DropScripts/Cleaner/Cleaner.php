@@ -1,7 +1,7 @@
 #!/usr/bin/php
 <?php
 
-// CleanHeader.php
+// Cleaner.php
 
 function processDOM($config, &$isModified, &$dom) {
 
@@ -13,21 +13,38 @@ function preProcessFile($config, &$isModified, &$fileContents) {
 
 function postProcessFile($config, &$isModified, &$fileContents) {
 
-    $newFileContents = $fileContents;
+    do { // non-loop
+        try {
 
-    $regExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>)|(\s*<\s*html[^>]*>))*\s*)([\s\S]*)/si";
-    $matches = [];
-    if (preg_match($regExp, $newFileContents, $matches)) {
-        $newFileContents = $matches[6];
+            $replacements = $config["replacements"];
+            if (! isset($replacements)) {
+                logNote("postProcessFile: no replacements found in config");
+                break;
+            }
+
+            $newFileContents = $fileContents;
+
+            foreach ($replacements as $replacement) {
+                $from = $replacement->from;
+                $to = $replacement->to;
+                try {
+                    $newFileContents = preg_replace($from, $to, $newFileContents);
+                }
+                catch (Exception $e) {
+                    echo "Replacement '$from' -> '$to' failed " . $e->getMessage();
+                }
+            }
+
+            if ($newFileContents != $fileContents) {
+                $isModified = true;
+                $fileContents = $newFileContents;
+            }
+        }
+        catch (Exception $e) {
+            echo "Processing file throws a PHP error: " . $e->getMessage();
+        }
     }
-
-    $newFileContents = $config["replaceHeader"] . $newFileContents;
-
-    if ($newFileContents != $fileContents) {
-        $isModified = true;
-        $fileContents = $newFileContents;
-    }
-
+    while (false); // non-loop
 
 }
 
@@ -69,16 +86,11 @@ function main($droppedFile) {
             $header = "";
             $contents = $fileContents;
 
-            $contentRegExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>))*)([\s\S]*)/s";
+            $regExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>))*)([\s\S]*)/s";
             $matches = [];
-            if (preg_match($contentRegExp, $fileContents, $matches)) {
-                $contents = $matches[5];
-            }
-
-            $headerRegExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>)|(\s*<\s*html[^>]*>))*\s*)([\s\S]*)/si";
-            $matches = [];
-            if (preg_match($headerRegExp, $fileContents, $matches)) {
+            if (preg_match($regExp, $fileContents, $matches)) {
                 $header = $matches[1];
+                $contents = $matches[5];
             }
 
             $dom->loadHTML($contents);
@@ -97,8 +109,8 @@ function main($droppedFile) {
             }
             else {
                 $output = $dom->saveHTML();         
-                if (preg_match($headerRegExp, $output, $matches)) {
-                    $output = $header . $matches[6];
+                if (preg_match($regExp, $output, $matches)) {
+                    $output = $header . $matches[5];
                 }
             }
 

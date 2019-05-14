@@ -1,17 +1,21 @@
-# CleanHeader.php
+# Cleaner.php
 
 ## What it does
 
-CleanHeader.php is a command-line PHP script which can process an HTML file.
+Cleaner.php is a command-line PHP script which can process an HTML file.
 
-It will look into the header area of the HTML file.
+It will perform a number of global search-and-replace operations.
+
+The default config.txt cleans up the header area.
 
 It will remove any mix-and-match of &lt;!DOCTYPE..., &lt;?xml..., and &lt;html... tags and replace them
-with a pre-configured replacement. This allows you to standardize a bunch of HTML files.
+with a pre-configured replacement. 
+
+This allows you to standardize a bunch of HTML files.
 
 ## Configuration
 
-CleanHeader.php will look for a file CleanHeader.config.txt nearby. In that file you can set 
+Cleaner.php will look for a file Cleaner.config.txt nearby. In that file you can set 
 or override configuration options. 
 
 The names of these options are case-sensitive.
@@ -67,13 +71,28 @@ first time.
 SomeFile.xhtml&lowbar;1.old, SomeFile.xhtml&lowbar;2.old... rotate. The &lowbar;1 file is the latest,
 the &lowbar;5 file is the oldest.
 
-### replaceHeader
+### replacements
 
-Required. Provide a string to use as the header. This string is quoted and in JavaScript notation.
+Required. Provide an array of entries for search-and-replace on the file.
+
+Each entry has a "from" and a "to" string. Individual entries are separated by commas.
+
+The "from" string is a PHP regular expression string, in JavaScript/JSON encoded
+fashion. 
+
+The "to" string is a replacement string.
+
+Both strings are quoted and in JavaScript notation.
 
 That means that all double quotes need to be prefixed with a backslash \
 
-A new line character can be encoded as \name
+A new line character can be encoded as \n 
+
+See
+
+https://www.php.net/manual/en/reference.pcre.pattern.syntax.php
+
+https://json.org/
 
 
 
