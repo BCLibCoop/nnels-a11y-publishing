@@ -75,6 +75,9 @@ function main($droppedFile) {
 
             $fileContents = file_get_contents($droppedFile);
 
+            $fileContents = str_replace("\015\012", "\012", $fileContents);
+            $fileContents = str_replace("\015", "\012", $fileContents);
+
             preProcessFile($config, $isModified, $fileContents);
 
             $dom = new DomDocument();
