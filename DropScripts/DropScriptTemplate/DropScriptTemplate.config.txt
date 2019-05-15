@@ -1,4 +1,8 @@
 {
+/****************
+	You can add comments. This is not pure JSON: DropToScript allows comments
+	using // or /*... notation
+****************/
     "acceptFileNameExtensions": [ "html", "htm", "xhtml" ],
     "backupFileNameExtension": "old",
     "maxBackupCount": 5

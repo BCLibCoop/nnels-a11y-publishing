@@ -1,7 +1,7 @@
 {
 	"replacements": [
 
-/*
+/****************
 		You can add multiple entries here. 
 
 		If you have multiple entries, they need
@@ -23,16 +23,24 @@
 			  "from": "such"
 			  "to": "something"		 
 			}
-*/
+****************/
 
 		{
-			/* "from" is a PHP regular expression string */
+/***************** 
+			"from" is a PHP regular expression string
+****************/
 
-			"from": "/(((\\s*<![^>]*>)|(\\s*<\\?[^>]*>)|(\\s*<\\s*html[^>]*>))+\\s*)/si",
+			"from": "/(((\\s*<![^>]*>)|(\\s*<\\?[^>]*>))+\\s*)/si",
 
-			/* "to" is a PHP regular expression replacement string. You can use back references like $1 or ${1} */
+/***************** 
+			"to" is a PHP regular expression replacement string. You can use back references like $1 or ${1} 
+****************/
 
-			"to": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n"
+			"to": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n"
 		}
+/***************** 
+		^^^ and if you add more entries, make sure to add a comma on the line above!
+*****************/
+
 	]
 }

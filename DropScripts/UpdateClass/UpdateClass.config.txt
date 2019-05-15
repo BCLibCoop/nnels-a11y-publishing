@@ -1,33 +1,38 @@
 {
 
-/*
+/****************
 	"processTags" is a list of lists: it contains processTag entries,
 	with each processTag entries containing a list of processClass entries.
-*/
+****************/
 
 	"processTags": [
 
-/*
+/****************
+
 		You can add multiple 'processTag' entries here,
-		each with their own 'tagMatch' and own list of processClass
-		entries
+		each with their own 'tagMatch' and their own list of 
+		processClass entries
 
 		If you have multiple entries, they need
 		to be separated by commas.
+
 		Don't append a comma to the last entry
-*/
+
+*****************/
 
 		{
 			"tagMatch": "/^.*$/i",
 			"processClasses": [
 
-/*
+/****************
+
 				In each processTag entry, you can add multiple 'processClass' entries 
 
 				If you have multiple entries, they need
 				to be separated by commas.
 				Don't append a comma to the last entry
-*/
+				
+****************/
 
 				{
 					"classMatch": "/_idGenCharOverride-\\d*/",
@@ -49,7 +54,13 @@
 					"classMatch": "/_idGenObjectAttribute-\\d*/",
 					"classReplace": ""
 				}
+/***************** 
+				^^^ and if you add more entries, make sure to add a comma on the line above!
+*****************/
 			]
 		}
+/***************** 
+		^^^ and if you add more entries, make sure to add a comma on the line above!
+*****************/
 	]
 }

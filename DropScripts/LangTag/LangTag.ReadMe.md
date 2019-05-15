@@ -15,6 +15,10 @@ or override configuration options.
 
 The names of these options are case-sensitive.
 
+### attrsToMove
+
+List of attributes to move from body tag to html tag. Will normally include 2 names: lang, and xml:lang.
+
 ### acceptFileNameExtensions
 
 Optional. The script will ignore any files whose file name does not end in one of the listed extensions
@@ -30,6 +34,15 @@ Optional. The file name extension to use for backup files
 The default when this is omitted is:
 
     "backupFileNameExtension": "old"
+
+### defaultIfMissing
+
+If there is no lang or xml:lang set on the body tag, use this as a default instead
+
+### lockHTMLHeader
+
+Must be set to 'false'. By default the &lt;html&gt; tag is locked from being modified by the 
+DropScript. Setting this to false allows this DropScript to change the html tag attributes.
 
 ### logLevel
 

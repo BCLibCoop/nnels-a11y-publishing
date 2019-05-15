@@ -1,2 +1,8 @@
 {
+	"lockHTMLHeader": false,
+	"defaultIfMissing": "en",
+	"attrsToMove": [ 
+		"lang",
+		"xml:lang"
+	]
 }

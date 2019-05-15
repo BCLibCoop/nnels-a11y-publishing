@@ -28,6 +28,11 @@ The default when this is omitted is:
 
     "backupFileNameExtension": "old"
 
+### lockHTMLHeader
+
+Default 'true'. By default the &lt;html&gt; tag is locked from being modified by the 
+DropScript. Setting this to false allows this DropScript to change the html tag attributes.
+
 ### logLevel
 
 Set to 0, 1, 2, 3, or 4. Depending on the number, more or less logging information will be

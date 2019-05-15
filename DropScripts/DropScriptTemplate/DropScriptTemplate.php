@@ -20,6 +20,13 @@ function postProcessFile($config, &$isModified, &$fileContents) {
 
     // If this reverses the changes made in preProcessFile, you should
     // not set isModified
+    // This is called before the locked headers have been restored
+
+}
+
+function postPostProcessFile($config, &$isModified, &$fileContents) {
+
+    // This is called after the locked headers have been restored
 
 }
 
@@ -42,6 +49,7 @@ function main($droppedFile) {
             }
 
             if (! isAcceptedFile($config, $droppedFile)) {
+                echo "File " . basename($droppedFile) . " was not modified.\n";
                 logWarning("main: file not accepted for processing " . $droppedFile);
                 break;
             }
@@ -70,7 +78,13 @@ function main($droppedFile) {
                 $contents = $matches[5];
             }
 
-            $headerRegExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>)|(\s*<\s*html[^>]*>))*\s*)([\s\S]*)/si";
+            if (! $config["lockHTMLHeader"]) {
+                $headerRegExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>))*\s*)([\s\S]*)/si";
+            }
+            else {
+                $headerRegExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>)|(\s*<\s*html[^>]*>))*\s*)([\s\S]*)/si";
+            }
+
             $matches = [];
             if (preg_match($headerRegExp, $fileContents, $matches)) {
                 $header = $matches[1];
@@ -93,13 +107,21 @@ function main($droppedFile) {
                 $output = $fileContents;
             }
             else {
-                $output = $dom->saveXML($dom);         
-                if (preg_match($headerRegExp, $output, $matches)) {
+                $output = $dom->saveXML($dom);
+            }
+
+            postProcessFile($config, $isModified, $output);
+
+            if (preg_match($headerRegExp, $output, $matches)) {
+                if (! $config["lockHTMLHeader"]) {
+                    $output = $header . $matches[5];
+                }
+                else {
                     $output = $header . $matches[6];
                 }
             }
 
-            postProcessFile($config, $isModified, $output);            
+            postPostProcessFile($config, $isModified, $output);
 
             if (! $isModified) {
                 echo "File " . basename($droppedFile) . " was not modified.\n";
@@ -205,6 +227,9 @@ function commented_json_decode($in_json) {
                         if ($c == "/") {
                             $state = JSON_PARSE_STATE_IDLE;
                         }
+                        else if ($c == "*") {
+                            $state = JSON_PARSE_STATE_SEEN_SLASH_STAR_STAR;
+                        }
                         else {
                             $state = JSON_PARSE_STATE_SEEN_SLASH_STAR;
                         }
@@ -275,6 +300,7 @@ function defaultConfig() {
 
     $config["acceptFileNameExtensions"] = [ "html", "htm", "xhtml" ];
     $config["backupFileNameExtension"]  = "old";
+    $config["lockHTMLHeader"]           = true;
     $config["maxBackupCount"]           = 5;
     $config["logLevel"]                 = LOG_NONE;
     $config["logEntryExit"]             = false;

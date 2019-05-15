@@ -1278,12 +1278,12 @@ Inherits Application
 		        Exit
 		      end if
 		      
-		      // Rorohiko Ltd., MBS Complete, 201909, KR0R31CRZz72LQG1y+S20L4fzQtrsL7617I1NwH4h5x0HLn+2sV+asaOEDQC1AJ=
-		      dim s as string = decodeBase64("S1IwUjMxQ1JaejcyTFFHMXkrUzI=", encodings.UTF8)
-		      dim p as string = decodeBase64("TUJTIENvbXBsZXRl", encodings.UTF8)
-		      dim n as string = decodeBase64("Um9yb2hpa28gTHRkLg==", encodings.UTF8)
+		      // MBS Complete, 201909, KR0R31CRZz72LQG1y+S20L4fzQtrsL7617I1NwH4h5x0HLn+2sV+asaOEDQC1AJ=
+		      dim s as string = decodeBase64("PLACEHOLDER=", encodings.UTF8)
+		      dim p as string = decodeBase64("PLACEHOLDER", encodings.UTF8)
+		      dim n as string = decodeBase64("PLACEHOLDER==", encodings.UTF8)
 		      dim e as integer = 201909
-		      dim t as string = decodeBase64("MEw0ZnpRdHJzTDc2MTdJMU53SDRoNXgwSExuKzJzVithc2FPRURRQzFBSj0=", encodings.UTF8)
+		      dim t as string = decodeBase64("PLACEHOLDER=", encodings.UTF8)
 		      
 		      if not registerMBSPlugin(n, p, e, s+t) then  
 		        MsgBox "MBS Plugin serial not valid?"

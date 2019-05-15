@@ -11,11 +11,26 @@ function processDOM($config, &$isModified, &$dom) {
 
         try {
 
+            $rawAttrsToMove = $config["attrsToMove"];
+
+            // Replace xml: with xml___
+            $attrsToMove = [];
+            foreach ($rawAttrsToMove as $rawAttr) {
+                $attr = str_replace("xml:", "xml___", $rawAttr);
+                $attrsToMove[] = $attr;
+            }
+
+            if (count($attrsToMove) == 0) {
+                logError("processDOM: no attributes to move");
+                break;
+            }
+
             $html = $dom->getElementsByTagName("html");
             if (! isset($html) || count($html) == 0) {
                 logWarning("processDOM: cannot find html tag");
                 break;
             }
+
             $html = $html[0];
             if (! isset($html)) {
                 logWarning("processDOM: cannot find html tag");
@@ -27,36 +42,28 @@ function processDOM($config, &$isModified, &$dom) {
                 logWarning("processDOM: cannot find body tag");
                 break;
             }
+
             $body = $body[0];
             if (! isset($body)) {
                 logWarning("processDOM: cannot find body tag");
                 break;
             }
 
-            $xmlLang = "";
-            if ($body->hasAttribute('xml___lang')) {
-                $xmlLang = $body->getAttribute('xml___lang');
-                $body->removeAttribute('xml___lang');
-                $isModified = true;
-            }
+            foreach ($attrsToMove as $attr) {
 
-            $lang = "";
-            if ($body->hasAttribute('lang')) {
-                $lang = $body->getAttribute('lang');
-                $body->removeAttribute('lang');
-                $isModified = true;
-            }
+                $attrVal = $config["defaultIfMissing"];
 
-            if (empty($lang) && empty($xmlLang)) {
-                break;
-            }
+                if ($body->hasAttribute($attr)) {
+                    $attrVal = $body->getAttribute($attr);
+                    $body->removeAttribute($attr);
+                    $isModified = true;
+                }
 
-            if (! empty($lang)) {
-                $html->setAttribute('lang', $lang);
-            }
+                if (! empty($attrVal)) {
+                    $html->setAttribute($attr, $attrVal);
+                    $isModified = true;
+                }
 
-            if (! empty($xmlLang)) {
-                $html->setAttribute('xml___lang', $xmlLang);
             }
 
         }
@@ -79,15 +86,20 @@ function preProcessFile($config, &$isModified, &$fileContents) {
     //
     // So we're sidestepping the issue and temporarily replace xml:lang with xml___lang
 
-    $fileContents = preg_replace("/(<(body|html)[^>]*)xml:lang(=\"[^\"]*\"[^>]*>)/", "$1xml___lang$3", $fileContents);
+    $fileContents = preg_replace("/(<(body|html)[^>]*)xml:([a-zA-Z]+=\"[^\"]*\"[^>]*>)/", "$1xml___$3", $fileContents);
 
 }
 
 function postProcessFile($config, &$isModified, &$fileContents) {
 
-    $fileContents = preg_replace("/(<(body|html)[^>]*)xml___lang(=\"[^\"]*\"[^>]*>)/", "$1xml:lang$3", $fileContents);
+    $fileContents = preg_replace("/(<(body|html)[^>]*)xml___([a-zA-Z]+=\"[^\"]*\"[^>]*>)/", "$1xml:$3", $fileContents);
 
 }
+
+function postPostProcessFile($config, &$isModified, &$fileContents) {
+
+}
+
 
 // -- AUTO-GENERATED CODE BELOW. DO NOT EDIT BELOW
 
@@ -108,6 +120,7 @@ function main($droppedFile) {
             }
 
             if (! isAcceptedFile($config, $droppedFile)) {
+                echo "File " . basename($droppedFile) . " was not modified.\n";
                 logWarning("main: file not accepted for processing " . $droppedFile);
                 break;
             }
@@ -136,7 +149,13 @@ function main($droppedFile) {
                 $contents = $matches[5];
             }
 
-            $headerRegExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>)|(\s*<\s*html[^>]*>))*\s*)([\s\S]*)/si";
+            if (! $config["lockHTMLHeader"]) {
+                $headerRegExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>))*\s*)([\s\S]*)/si";
+            }
+            else {
+                $headerRegExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>)|(\s*<\s*html[^>]*>))*\s*)([\s\S]*)/si";
+            }
+
             $matches = [];
             if (preg_match($headerRegExp, $fileContents, $matches)) {
                 $header = $matches[1];
@@ -159,13 +178,21 @@ function main($droppedFile) {
                 $output = $fileContents;
             }
             else {
-                $output = $dom->saveXML($dom);         
-                if (preg_match($headerRegExp, $output, $matches)) {
+                $output = $dom->saveXML($dom);
+            }
+
+            postProcessFile($config, $isModified, $output);
+
+            if (preg_match($headerRegExp, $output, $matches)) {
+                if (! $config["lockHTMLHeader"]) {
+                    $output = $header . $matches[5];
+                }
+                else {
                     $output = $header . $matches[6];
                 }
             }
 
-            postProcessFile($config, $isModified, $output);            
+            postPostProcessFile($config, $isModified, $output);
 
             if (! $isModified) {
                 echo "File " . basename($droppedFile) . " was not modified.\n";
@@ -271,6 +298,9 @@ function commented_json_decode($in_json) {
                         if ($c == "/") {
                             $state = JSON_PARSE_STATE_IDLE;
                         }
+                        else if ($c == "*") {
+                            $state = JSON_PARSE_STATE_SEEN_SLASH_STAR_STAR;
+                        }
                         else {
                             $state = JSON_PARSE_STATE_SEEN_SLASH_STAR;
                         }
@@ -341,6 +371,7 @@ function defaultConfig() {
 
     $config["acceptFileNameExtensions"] = [ "html", "htm", "xhtml" ];
     $config["backupFileNameExtension"]  = "old";
+    $config["lockHTMLHeader"]           = true;
     $config["maxBackupCount"]           = 5;
     $config["logLevel"]                 = LOG_NONE;
     $config["logEntryExit"]             = false;
