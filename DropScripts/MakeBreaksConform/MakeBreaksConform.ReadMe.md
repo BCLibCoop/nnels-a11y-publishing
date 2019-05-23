@@ -1,8 +1,8 @@
-# ConformBreaks.php
+# MakeBreaksConform.php
 
 ## What it does
 
-ConformBreaks.php is a command-line PHP script which can process an HTML file.
+MakeBreaksConform.php is a command-line PHP script which can process an HTML file.
 
 It is identical to the Cleaner.php script, but simply uses different patterns in its config files.
 
@@ -39,7 +39,7 @@ gets replaced by
 
 ## Configuration
 
-ConformBreaks.php will look for a file ConformBreaks.config.txt nearby. In that file you can set 
+MakeBreaksConform.php will look for a file MakeBreaksConform.config.txt nearby. In that file you can set 
 or override configuration options. 
 
 The names of these options are case-sensitive.
