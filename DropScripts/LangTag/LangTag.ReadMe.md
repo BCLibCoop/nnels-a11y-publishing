@@ -2,7 +2,7 @@
 
 ## What it does
 
-AutoTitle.php is a command-line PHP script which can process an HTML file.
+LangTag.php is a command-line PHP script which can process an HTML file.
 
 It will look for the &lt;body&gt; and &lt;html&gt; tags. 
 
