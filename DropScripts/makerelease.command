@@ -49,7 +49,12 @@ do
     fi
 done
 
-ls "$winScripts/"*.txt "$winScripts/"*.php | while read winFile
+cp $scriptsDir/$dropScriptTemplateName/*.php.inc "$linuxScripts"
+cp $scriptsDir/$dropScriptTemplateName/*.php.inc "$macScripts"
+cp $scriptsDir/$dropScriptTemplateName/*.php.inc "$winScripts"
+
+ls "$winScripts/"*.txt "$winScripts/"*.php "$winScripts/"*.php.inc | while read winFile
+
 do
     cp $winFile $winFile.lf
     perl -p -e 's/\n/\r\n/' < $winFile.lf > $winFile

@@ -1,0 +1,47 @@
+{
+	"replacements": [
+
+/****************
+		You can add multiple entries here. 
+
+		If you have multiple entries, they need
+		to be separated by commas.
+		Don't append a comma to the last entry
+
+		Example:
+			
+			{
+			  "from": "this"
+			  "to": "that"		 
+			},
+			{
+			  "from": "abc"
+			  "to": "def"		 
+			},
+			...
+			{
+			  "from": "such"
+			  "to": "something"		 
+			}
+****************/
+
+		{
+		
+/***************** 
+			"from" is a PHP regular expression string
+****************/
+
+			"from": "~<a\\s+(id=\"page[-_ ]*([^\"]*)\")([^/>]*/>|[^/>]*></a>)~i",
+
+/***************** 
+			"to" is a PHP regular expression replacement string. You can use back references like $1 or ${1} 
+****************/
+
+			"to": "<span epub:type=\"pagebreak\" $1 role=\"doc-pagebreak\" aria-label=\"$2\" />"
+		}
+/***************** 
+		^^^ and if you add more entries, make sure to add a comma on the line above!
+*****************/
+
+	]
+}
