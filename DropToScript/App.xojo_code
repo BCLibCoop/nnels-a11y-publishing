@@ -155,6 +155,37 @@ Inherits Application
 		End Sub
 	#tag EndMethod
 
+	#tag Method, Flags = &h0
+		Sub AddToScriptOutput(in_output as String)
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Do 
+		    
+		    Try
+		      
+		      fScriptOutput = fScriptOutput + in_output + EndOfLine
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		    End Try
+		    
+		  Loop Until true
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogExit CurrentMethodName
+		  #EndIf
+		  
+		End Sub
+	#tag EndMethod
+
 	#tag Method, Flags = &h21
 		Private Function CleanupFolderContent(in_folder as FolderItem, in_folderContentDict as Dictionary) As Boolean
 		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
@@ -685,7 +716,7 @@ Inherits Application
 		      
 		      if fSelectedScript <> nil and UBound(fDocumentQueue) >= 0 then
 		        
-		        AddToReport "Using script " + fSelectedScript.Name
+		        Log.LogNote "Using script " + fSelectedScript.Name
 		        
 		        success = true
 		        for idx as integer = 0 to UBound(fDocumentQueue)
@@ -694,9 +725,9 @@ Inherits Application
 		          Dim fileSuccess as Boolean
 		          fileSuccess = HandleDroppedFile(droppedFile)
 		          if fileSuccess then
-		            AddToReport "Success: processed " + droppedFile.Name
+		            Log.LogNote "Success: processed " + droppedFile.Name
 		          else
-		            AddToReport "Failure: attempted to process " + droppedFile.Name
+		            Log.LogNote "Failure: attempted to process " + droppedFile.Name
 		          end if
 		          success = fileSuccess and success
 		        next
@@ -717,7 +748,7 @@ Inherits Application
 		      success = true
 		      if fSelectedScript <> nil then
 		        
-		        AddToReport "Using script " + fSelectedScript.Name
+		        Log.LogNote "Using script " + fSelectedScript.Name
 		        
 		        for idx as integer = 0 to UBound(fDocumentQueue)
 		          Dim droppedFile as FolderItem
@@ -725,9 +756,9 @@ Inherits Application
 		          Dim fileSuccess as Boolean
 		          fileSuccess = HandleDroppedFile(droppedFile)
 		          if fileSuccess then
-		            AddToReport "Success: processed " + droppedFile.Name
+		            Log.LogNote "Success: processed " + droppedFile.Name
 		          else
-		            AddToReport "Failure: attempted to process " + droppedFile.Name
+		            Log.LogNote "Failure: attempted to process " + droppedFile.Name
 		          end if
 		          success = fileSuccess and success
 		        next
@@ -1009,7 +1040,7 @@ Inherits Application
 		        Exit
 		      end if
 		      
-		      AddToReport "Handling EPUB file " + in_epubFile.Name
+		      Log.LogNote "Handling EPUB file " + in_epubFile.Name
 		      
 		      if fTemporaryDecompressedEPUB = nil then
 		        fTemporaryDecompressedEPUB = GetTemporaryFolderItem()
@@ -1067,9 +1098,9 @@ Inherits Application
 		        Dim fileSuccess as Boolean
 		        fileSuccess = HandleDroppedFile(targetFile)
 		        if fileSuccess then
-		          AddToReport "Success: processed " + targetFile.Name
+		          Log.LogNote "Success: processed " + targetFile.Name
 		        else
-		          AddToReport "Failure: attempted to process " + targetFile.Name
+		          Log.LogNote "Failure: attempted to process " + targetFile.Name
 		        end if
 		        
 		        if not fileSuccess then
@@ -1133,7 +1164,7 @@ Inherits Application
 		  recursiveEPUB = prvRecursiveEPUB
 		  
 		  if not success then
-		    AddToReport "Failed to process EPUB file"
+		    Log.LogNote "Failed to process EPUB file"
 		  end if
 		  
 		  #If Cfg.IS_ENTRY_EXIT_LOGGING
@@ -1234,7 +1265,25 @@ Inherits Application
 		      Dim output as String
 		      output = Trim(sh.ReadAll)
 		      if output <> "" then
-		        AddToReport EndOfLine + output
+		        Dim outputLines() as String
+		        outputLines = output.Split(Chr(13) + Chr(10))
+		        if UBound(outputLines) = 0 then
+		          outputLines = output.Split(Chr(10))
+		          if UBound(outputLines) = 0 then
+		            outputLines = output.Split(Chr(13))
+		          end if
+		        end if
+		        
+		        for idx as integer = 0 to UBound(outputLines)
+		          Dim line as String
+		          line = outputLines(idx)
+		          if Left(line, Len(OUTPUTPREFIX)) = OUTPUTPREFIX then
+		            AddToScriptOutput Mid(line, Len(OUTPUTPREFIX) + 1)
+		          else
+		            Log.LogNote output
+		          end if
+		        next
+		        
 		      end if
 		      
 		      success = true
@@ -1278,7 +1327,6 @@ Inherits Application
 		        Exit
 		      end if
 		      
-		      // MBS Complete, 201909, KR0R31CRZz72LQG1y+S20L4fzQtrsL7617I1NwH4h5x0HLn+2sV+asaOEDQC1AJ=
 		      dim s as string = decodeBase64("PLACEHOLDER=", encodings.UTF8)
 		      dim p as string = decodeBase64("PLACEHOLDER", encodings.UTF8)
 		      dim n as string = decodeBase64("PLACEHOLDER==", encodings.UTF8)
@@ -1512,6 +1560,10 @@ Inherits Application
 		      if fReport <> "" then
 		        WndReport.ShowReport fReport
 		      end if
+		      if fScriptOutput <> "" then
+		        WndScriptOutput.ShowScriptOutput fScriptOutput
+		      end if
+		      
 		      Quit
 		      
 		    Catch e As RuntimeException
@@ -1558,6 +1610,10 @@ Inherits Application
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
+		Private fScriptOutput As String
+	#tag EndProperty
+
+	#tag Property, Flags = &h21
 		Private fSelectedScript As FolderItem
 	#tag EndProperty
 
@@ -1578,6 +1634,9 @@ Inherits Application
 	#tag Constant, Name = kFileQuitShortcut, Type = String, Dynamic = False, Default = \"", Scope = Public
 		#Tag Instance, Platform = Mac OS, Language = Default, Definition  = \"Cmd+Q"
 		#Tag Instance, Platform = Linux, Language = Default, Definition  = \"Ctrl+Q"
+	#tag EndConstant
+
+	#tag Constant, Name = OUTPUTPREFIX, Type = String, Dynamic = False, Default = \">!>:", Scope = Public
 	#tag EndConstant
 
 
