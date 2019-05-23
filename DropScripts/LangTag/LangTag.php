@@ -31,7 +31,7 @@ function processDOM($config, &$isModified, &$dom) {
                 break;
             }
 
-            $html = $html[0];
+            $html = $html->item(0);
             if (! isset($html)) {
                 logWarning("processDOM: cannot find html tag");
                 break;
@@ -43,7 +43,7 @@ function processDOM($config, &$isModified, &$dom) {
                 break;
             }
 
-            $body = $body[0];
+            $body = $body->item(0);
             if (! isset($body)) {
                 logWarning("processDOM: cannot find body tag");
                 break;

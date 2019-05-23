@@ -30,12 +30,16 @@
 			"from" is a PHP regular expression string
 ****************/
 
-			"from": "/(((\\s*<![^>]*>)|(\\s*<\\?[^>]*>))+\\s*)/si",
+			"from": "/(((\\s*<![^>]*>)|(\\s*<\\?[^>]*>))+\\s*)(?!<html)(.*)/si",
 
 /***************** 
 			"to" is a PHP regular expression replacement string. You can use back references like $1 or ${1} 
 ****************/
 
+			"to": "$1\n<html xmlns:epub=\"http://www.idpf.org/2007/ops\" xmlns=\"http://www.w3.org/1999/xhtml\">\n$5\n</html>"
+		},
+		{
+			"from": "/(((\\s*<![^>]*>)|(\\s*<\\?[^>]*>))+\\s*)/si",
 			"to": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n"
 		}
 /***************** 
