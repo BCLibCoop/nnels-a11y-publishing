@@ -70,7 +70,7 @@ Begin Window WndReport
       DataSource      =   ""
       Enabled         =   True
       Format          =   ""
-      Height          =   326
+      Height          =   197
       HelpTag         =   ""
       HideSelection   =   True
       Index           =   -2147483648
@@ -100,6 +100,54 @@ Begin Window WndReport
       TextSize        =   0.0
       TextUnit        =   0
       Top             =   20
+      Transparent     =   False
+      Underline       =   False
+      UseFocusRing    =   True
+      Visible         =   True
+      Width           =   560
+   End
+   Begin TextArea TxtLog
+      AcceptTabs      =   False
+      Alignment       =   0
+      AutoDeactivate  =   True
+      AutomaticallyCheckSpelling=   True
+      BackColor       =   &cFFFFFF00
+      Bold            =   False
+      Border          =   False
+      DataField       =   ""
+      DataSource      =   ""
+      Enabled         =   True
+      Format          =   ""
+      Height          =   117
+      HelpTag         =   ""
+      HideSelection   =   True
+      Index           =   -2147483648
+      Italic          =   False
+      Left            =   20
+      LimitText       =   0
+      LineHeight      =   0.0
+      LineSpacing     =   1.0
+      LockBottom      =   True
+      LockedInPosition=   False
+      LockLeft        =   True
+      LockRight       =   True
+      LockTop         =   False
+      Mask            =   ""
+      Multiline       =   True
+      ReadOnly        =   False
+      Scope           =   0
+      ScrollbarHorizontal=   True
+      ScrollbarVertical=   True
+      Styled          =   True
+      TabIndex        =   3
+      TabPanelIndex   =   0
+      TabStop         =   True
+      Text            =   ""
+      TextColor       =   &c00000000
+      TextFont        =   "System"
+      TextSize        =   0.0
+      TextUnit        =   0
+      Top             =   229
       Transparent     =   False
       Underline       =   False
       UseFocusRing    =   True
@@ -142,40 +190,7 @@ End
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Sub ShowReport(in_report as String)
-		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
-		    #Pragma DisableBoundsChecking
-		    #Pragma StackOverflowchecking False
-		    #Pragma NilObjectChecking False
-		  #EndIf
-		  
-		  #If Cfg.IS_ENTRY_EXIT_LOGGING
-		    Log.LogEntry CurrentMethodName
-		  #EndIf
-		  
-		  Do 
-		    
-		    Try
-		      
-		      TxtReport.Text = in_report
-		      
-		      ShowModal
-		      
-		    Catch e As RuntimeException
-		      Log.LogError CurrentMethodName, "throws " + e.Message
-		    End Try
-		    
-		  Loop Until True
-		  
-		  #If Cfg.IS_ENTRY_EXIT_LOGGING
-		    Log.LogEntry CurrentMethodName
-		  #EndIf
-		  
-		End Sub
-	#tag EndMethod
-
-	#tag Method, Flags = &h0
-		Sub ShowReportLine(in_line as String)
+		Sub ShowLogLine(in_line as String)
 		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
 		    #Pragma DisableBoundsChecking
 		    #Pragma StackOverflowchecking False
@@ -194,7 +209,55 @@ End
 		        Show
 		      end if
 		      
-		      TxtReport.Text = TxtReport.Text + in_line + EndOfLine
+		      TxtLog.Text = TxtLog.Text + in_line + EndOfLine
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		    End Try
+		    
+		  Loop Until True
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		End Sub
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Sub ShowReport(in_report as String)
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Do 
+		    
+		    Try
+		      
+		      Dim report as String
+		      report = Trim(in_report)
+		      if report <> "" or TxtLog.Text <> "" then
+		        
+		        if report = "" then
+		          Dim height as integer 
+		          height = TxtLog.Top + TxtLog.Height - TxtReport.Top
+		          TxtReport.Visible = false
+		          TxtLog.Top = TxtReport.Top
+		          TxtLog.Height = height
+		          TxtLog.LockTop = true
+		        else
+		          TxtReport.Text = report
+		        end if
+		        
+		        ShowModal
+		        
+		      end if
 		      
 		    Catch e As RuntimeException
 		      Log.LogError CurrentMethodName, "throws " + e.Message

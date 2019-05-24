@@ -140,7 +140,7 @@ Inherits Application
 		    Try
 		      
 		      fReport = fReport + in_message + EndOfLine
-		      WndReport.ShowReportLine in_message
+		      WndReport.ShowLogLine in_message
 		      
 		    Catch e As RuntimeException
 		      Log.LogError CurrentMethodName, "throws " + e.Message
@@ -727,7 +727,7 @@ Inherits Application
 		          if fileSuccess then
 		            Log.LogNote "Success: processed " + droppedFile.Name
 		          else
-		            Log.LogNote "Failure: attempted to process " + droppedFile.Name
+		            Log.LogError "Failure: attempted to process " + droppedFile.Name
 		          end if
 		          success = fileSuccess and success
 		        next
@@ -758,7 +758,7 @@ Inherits Application
 		          if fileSuccess then
 		            Log.LogNote "Success: processed " + droppedFile.Name
 		          else
-		            Log.LogNote "Failure: attempted to process " + droppedFile.Name
+		            Log.LogError "Failure: attempted to process " + droppedFile.Name
 		          end if
 		          success = fileSuccess and success
 		        next
@@ -944,7 +944,7 @@ Inherits Application
 		      end if
 		      
 		      if not in_folder.Exists() then
-		        Log.LogNote CurrentMethodName, "in_folder does not exist"
+		        Log.LogError CurrentMethodName, "in_folder does not exist"
 		        Exit
 		      end if
 		      
@@ -1100,12 +1100,9 @@ Inherits Application
 		        if fileSuccess then
 		          Log.LogNote "Success: processed " + targetFile.Name
 		        else
-		          Log.LogNote "Failure: attempted to process " + targetFile.Name
+		          Log.LogError "Failure: attempted to process " + targetFile.Name
 		        end if
 		        
-		        if not fileSuccess then
-		          Log.LogError CurrentMethodName, "failed to process " + targetFile.NativePath
-		        end if
 		        success = fileSuccess and success
 		        
 		      next
@@ -1164,7 +1161,7 @@ Inherits Application
 		  recursiveEPUB = prvRecursiveEPUB
 		  
 		  if not success then
-		    Log.LogNote "Failed to process EPUB file"
+		    Log.LogError "Failed to process EPUB file"
 		  end if
 		  
 		  #If Cfg.IS_ENTRY_EXIT_LOGGING
@@ -1193,6 +1190,8 @@ Inherits Application
 		  Do
 		    
 		    Try
+		      
+		      fFileCount = fFileCount + 1
 		      
 		      if in_file = nil then
 		        Log.LogError CurrentMethodName, "in_file is nil"
@@ -1298,6 +1297,10 @@ Inherits Application
 		    Log.LogEntry CurrentMethodName
 		  #EndIf
 		  
+		  if success then
+		    fSuccessFileCount = fSuccessFileCount + 1
+		  end if
+		  
 		  return success
 		  
 		End Function
@@ -1327,11 +1330,11 @@ Inherits Application
 		        Exit
 		      end if
 		      
-		      dim s as string = decodeBase64("PLACEHOLDER=", encodings.UTF8)
-		      dim p as string = decodeBase64("PLACEHOLDER", encodings.UTF8)
-		      dim n as string = decodeBase64("PLACEHOLDER==", encodings.UTF8)
+		      dim s as string = decodeBase64("S1IwUjMxQ1JaejcyTFFHMXkrUzI=", encodings.UTF8)
+		      dim p as string = decodeBase64("TUJTIENvbXBsZXRl", encodings.UTF8)
+		      dim n as string = decodeBase64("Um9yb2hpa28gTHRkLg==", encodings.UTF8)
 		      dim e as integer = 201909
-		      dim t as string = decodeBase64("PLACEHOLDER=", encodings.UTF8)
+		      dim t as string = decodeBase64("MEw0ZnpRdHJzTDc2MTdJMU53SDRoNXgwSExuKzJzVithc2FPRURRQzFBSj0=", encodings.UTF8)
 		      
 		      if not registerMBSPlugin(n, p, e, s+t) then  
 		        MsgBox "MBS Plugin serial not valid?"
@@ -1435,7 +1438,7 @@ Inherits Application
 		        
 		        backupFile = parentFolder.Child(backupFileName)
 		        
-		      loop until Not backupFile.Exists and backupIdx < Cfg.MAX_BACKUPS
+		      loop until Not backupFile.Exists or backupIdx >= Cfg.MAX_BACKUPS
 		      
 		      while backupIdx > 2
 		        
@@ -1557,12 +1560,12 @@ Inherits Application
 		    
 		    Try
 		      
-		      if fReport <> "" then
-		        WndReport.ShowReport fReport
+		      if fFileCount > 0 then
+		        Log.LogMessage "Total # of files inspected: " + Str(fFileCount)
+		        Log.LogMessage "# of files that caused an error: " + Str(fFileCount - fSuccessFileCount)
 		      end if
-		      if fScriptOutput <> "" then
-		        WndScriptOutput.ShowScriptOutput fScriptOutput
-		      end if
+		      
+		      WndReport.ShowReport fScriptOutput
 		      
 		      Quit
 		      
@@ -1573,7 +1576,6 @@ Inherits Application
 		    End Try
 		    
 		  Loop Until True
-		  
 		  
 		  
 		  #If Cfg.IS_ENTRY_EXIT_LOGGING
@@ -1587,6 +1589,10 @@ Inherits Application
 
 	#tag Property, Flags = &h21
 		Private fDocumentQueue() As FolderItem
+	#tag EndProperty
+
+	#tag Property, Flags = &h21
+		Private fFileCount As Integer
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
@@ -1615,6 +1621,10 @@ Inherits Application
 
 	#tag Property, Flags = &h21
 		Private fSelectedScript As FolderItem
+	#tag EndProperty
+
+	#tag Property, Flags = &h21
+		Private fSuccessFileCount As Integer
 	#tag EndProperty
 
 	#tag Property, Flags = &h21

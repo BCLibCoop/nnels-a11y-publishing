@@ -86,13 +86,13 @@ function preProcessFile($config, &$isModified, &$fileContents) {
     //
     // So we're sidestepping the issue and temporarily replace xml:lang with xml___lang
 
-    $fileContents = preg_replace("/(<(body|html)[^>]*)xml:([a-zA-Z]+=\"[^\"]*\"[^>]*>)/", "$1xml___$3", $fileContents);
+    $fileContents = preg_replace("~(<(body|html)[^>]*\\bxml):([a-zA-Z]+=\"[^\"]*\"[^>]*/?>)~i", "$1___$3", $fileContents);
 
 }
 
 function postProcessFile($config, &$isModified, &$fileContents) {
 
-    $fileContents = preg_replace("/(<(body|html)[^>]*)xml___([a-zA-Z]+=\"[^\"]*\"[^>]*>)/", "$1xml:$3", $fileContents);
+    $fileContents = preg_replace("~(<(body|html)[^>]*\\bxml)___([a-zA-Z]+=\"[^\"]*\"[^>]*/?>)~i", "$1:$3", $fileContents);
 
 }
 
@@ -143,25 +143,34 @@ function main($droppedFile) {
             $header = "";
             $contents = $fileContents;
 
-            $contentRegExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>))*)([\s\S]*)/s";
+            $contentRegExp = "/(((\s*<\\?[^>]*\\?>)|(\s*<![^>]*>))+)([\s\S]*)/s";
             $matches = [];
-            if (preg_match($contentRegExp, $fileContents, $matches)) {
+            $hasIsolatedContent = false;
+            if (preg_match($contentRegExp, $fileContents, $matches) && isset($matches[2])) {
                 $contents = $matches[5];
+                $hasIsolatedContent = true;
             }
 
-            if (! $config["lockHTMLHeader"]) {
-                $headerRegExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>))*\s*)([\s\S]*)/si";
-            }
-            else {
-                $headerRegExp = "/(((\s*<![^>]*>)|(\s*<\?[^>]*>)|(\s*<\s*html[^>]*>))*\s*)([\s\S]*)/si";
+            if ($hasIsolatedContent) {
+
+                if (! $config["lockHTMLHeader"]) {
+                    $headerRegExp = "/(((\s*<\\?[^>]*\\?>)|(\s*<![^>]*>))+\s*)([\s\S]*)/si";
+                }
+                else {
+                    $headerRegExp = "/(((\s*<\\?[^>]*\\?>)|(\s*<![^>]*>)|(\s*<\s*html[^>]*>))+\s*)([\s\S]*)/si";
+                }
+
+                $matches = [];
+                if (preg_match($headerRegExp, $fileContents, $matches)) {
+                    $header = $matches[1];
+                }
+
             }
 
-            $matches = [];
-            if (preg_match($headerRegExp, $fileContents, $matches)) {
-                $header = $matches[1];
+            $originalContents = $contents;
+            if (! strpos("<?xml", $contents)) {
+                $contents = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" . $contents;
             }
-
-            $contents = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" . $contents;
             
             $dom->loadHTML($contents);
 
@@ -175,7 +184,7 @@ function main($droppedFile) {
             $isModified = $isModified || $isDomModified;
 
             if (! $isDomModified) {
-                $output = $fileContents;
+                $output = $originalContents;
             }
             else {
                 $output = $dom->saveXML($dom);
@@ -183,7 +192,7 @@ function main($droppedFile) {
 
             postProcessFile($config, $isModified, $output);
 
-            if (preg_match($headerRegExp, $output, $matches)) {
+            if ($hasIsolatedContent && isset($header) && preg_match($headerRegExp, $output, $matches)) {
                 if (! $config["lockHTMLHeader"]) {
                     $output = $header . $matches[5];
                 }

@@ -1,0 +1,10 @@
+{
+	"searchPatterns": [
+		{
+			"match": "~<span[^>]*(role=\"doc-pagebreak\"|epub:type=\"pagebreak\")[^>]*>~i",
+			"convertMatchFrom": "~^.*aria-label=\"([^\"]+)\".*$~i",
+			"convertMatchTo": "$1"
+		}
+
+	]
+}

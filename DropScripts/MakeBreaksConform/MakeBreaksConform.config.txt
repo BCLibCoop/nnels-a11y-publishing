@@ -1,47 +1,71 @@
 {
+	/*
+	* This uses a consecutive number of search-and-replace 
+	* to gradually 'massage' page breaks into their final form
+	* We use a trick to temporarily 'park' certain spans by renaming them
+	* to Span or SPan (one or two uppercase letters) so they become
+	* invisible to the following search-and-replace operations
+	*/
 	"replacements": [
-
-/****************
-		You can add multiple entries here. 
-
-		If you have multiple entries, they need
-		to be separated by commas.
-		Don't append a comma to the last entry
-
-		Example:
-			
-			{
-			  "from": "this"
-			  "to": "that"		 
-			},
-			{
-			  "from": "abc"
-			  "to": "def"		 
-			},
-			...
-			{
-			  "from": "such"
-			  "to": "something"		 
-			}
-****************/
-
 		{
-		
-/***************** 
-			"from" is a PHP regular expression string
-****************/
-
-			"from": "~<a\\s+(id=\"page[-_ ]*([^\"]*)\")([^/>]*/>|[^/>]*></a>)~i",
-
-/***************** 
-			"to" is a PHP regular expression replacement string. You can use back references like $1 or ${1} 
-****************/
-
-			"to": "<span epub:type=\"pagebreak\" $1 role=\"doc-pagebreak\" aria-label=\"$2\" />"
+			/* convert <a></a> tags into <a/> tags */
+			"from": "~<a\\s+([^/>]*?)\\s*></a>~i",
+			"to": "<a $1 />"
+		},
+		{
+			/* convert <a/> tags into <a /> tags */
+			"from": "~<a\\s+([^/>]*?)\\s*/>~i",
+			"to": "<a $1 />"
+		},
+		{
+			/* convert <span></span> tags into <span/> tags */
+			"from": "~<span\\s+([^/>]*?)\\s*></span>~i",
+			"to": "<span $1 />"
+		},
+		{
+			/* convert <span/> tags into <span /> tags */
+			"from": "~<span\\s+([^/>]*?)\\s*/>~i",
+			"to": "<span $1 />"
+		},
+		{
+			/* convert <a /> tags with a page break ID into spans */
+			"from": "~<a\\s+([^/>]*\\s)?\\s*(id=\"page[-_ ]*[^\"]*\"\\s)\\s*([^/>]*\\s)?\\s*/>~i",
+			"to": "<span epub:type=\"pagebreak\" $2$1$3/>"
+		},
+		{
+			/*
+			* Make the ones with an aria-label to 'Span' with an uppercase S so they don't appear in the next search 
+			* (case sensitive match) 
+			*/
+			"from": "~<span\\s+([^/>]*\\s)?\\s*(aria-label=\"[^\"]*\"\\s)\\s*([^/>]*\\s)?\\s*/>~",
+			"to": "<Span $1$2$3/>"
+		},
+		{
+			/* Create an aria label based on the page id (case sensitive match) */
+			"from": "~<span\\s+([^/>]*\\s)?\\s*(id=\"page[-_ ]*([^\"]*)\"\\s)\\s*([^/>]*\\s)?\\s*/>~",
+			"to": "<span aria-label=\"$3\" $1$2$4/>"
+		},
+		{
+			/*
+			* Make the ones with a rol to 'SPan' with an uppercase SP so they don't appear in the next search  
+			* (case sensitive match) 
+			*/
+			"from": "~<span\\s+([^/>]*\\s)?\\s*(role=\"[^\"]*\"\\s)\\s*([^/>]*\\s)?\\s*/>~",
+			"to": "<SPan $1$2$3/>"
+		},
+		{
+			/* 
+			* Add in a role (case sensitive match) 
+			*/
+			"from": "~<span\\s+([^/>]*\\s)?\\s*(epub:type=\"pagebreak\"\\s)\\s*([^/>]*\\s)?\\s*/>~",
+			"to": "<span role=\"doc-pagebreak\" $1$2$3/>"
+		},
+		{
+			/* 
+			* Convert SPan and Span back to span 
+			*/
+			"from": "~<span\\s+([^/>]*)/>~i",
+			"to": "<span $1/>"
 		}
-/***************** 
-		^^^ and if you add more entries, make sure to add a comma on the line above!
-*****************/
-
 	]
 }
