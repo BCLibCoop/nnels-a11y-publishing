@@ -73,18 +73,22 @@ first time.
 SomeFile.xhtml&lowbar;1.old, SomeFile.xhtml&lowbar;2.old... rotate. The &lowbar;1 file is the latest,
 the &lowbar;5 file is the oldest.
 
-### replacements
+### searchpatterns
 
-Required. Provide an array of entries for search-and-replace on the file.
+Required. Provide an array of entries for find, then search-and-replace in order to generate
+reported items.
 
-Each entry has a "from" and a "to" string. Individual entries are separated by commas.
+Each entry has a "match", a "convertMatchFrom" and a "convertMatchTo" string. Individual entries are separated by commas.
 
-The "from" string is a PHP regular expression string, in JavaScript/JSON encoded
-fashion. 
+The "match" string is a PHP regular expression string, in JavaScript/JSON encoded
+fashion. This expresses what we're looking for.
 
-The "to" string is a replacement string.
+The "convertMatchFrom" string a search string _within_ a match string. This allows us to extract some
+sub-string of the match.
 
-Both strings are quoted and in JavaScript notation.
+The "convertMatchTo" string a replacement string. This is what will end up in the report.
+
+All three strings are quoted and in JavaScript notation.
 
 That means that all double quotes need to be prefixed with a backslash \
 
