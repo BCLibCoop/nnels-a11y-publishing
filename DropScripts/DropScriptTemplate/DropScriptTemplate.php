@@ -83,17 +83,17 @@ function main($droppedFile) {
                 $headLessContents = preg_replace($DOMregExp, "", $headLessContents);
             }
             if (! $DOMheader && $config["addDOMHeader"]) {
-                $DOMHeader = $config["defaultDOMHeader"];   
+                $DOMheader = $config["defaultDOMHeader"];   
             }
 
             $XMLheader = "";
             $XMLregExp = "~\\s*(<\\?[^>]*\\?>)\\s*~s";
             if (preg_match($XMLregExp, $headLessContents, $matches)) {
-                $XMLHeader = $matches[1];
+                $XMLheader = $matches[1];
                 $headLessContents = preg_replace($XMLregExp, "", $headLessContents);
             }
-            if (! $XMLHeader && $config["addXMLHeader"]) {
-                $XMLHeader = $config["defaultXMLHeader"];   
+            if (! $XMLheader && $config["addXMLHeader"]) {
+                $XMLheader = $config["defaultXMLHeader"];   
             }
 
             $defaultHTMLheader = $config["defaultHTMLheader"];
