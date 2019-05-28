@@ -21,6 +21,8 @@ function main($droppedFile) {
 
         try {
 
+            $freeUnusedStrings = true;
+
             $config = init($droppedFile);
 
             if (! file_exists($droppedFile)) {
@@ -38,50 +40,72 @@ function main($droppedFile) {
 
             $fileContents = file_get_contents($droppedFile);
 
-            $fileContents = str_replace("\015\012", "\012", $fileContents);
-            $fileContents = str_replace("\015", "\012", $fileContents);
+            $lineEndCleanFileContents = str_replace("\015\012", "\012", $fileContents);
+            $lineEndCleanFileContents = str_replace("\015", "\012", $lineEndCleanFileContents);
 
-            preProcessFile($config, $isModified, $fileContents);
+            $preProcessModified = false;
+            preProcessFile($config, $preProcessModified, $lineEndCleanFileContents);
+            $isModified |=  $preProcessModified;
+
+            $header = "";
+            $headLessContents = $lineEndCleanFileContents;
+
+            if ($freeUnusedStrings) {
+                $lineEndCleanFileContents = NULL;
+            }
+
+            $matches = [];
+
+            $DOMheader = "";
+            $DOMregExp = "~\\s*(<![^>]*>)\\s*~s";
+            if (preg_match($DOMregExp, $headLessContents, $matches)) {
+                $DOMheader = $matches[1];
+                $headLessContents = preg_replace($DOMregExp, "", $headLessContents);
+            }
+            if (! $DOMheader && $config["addDOMHeader"]) {
+                $DOMHeader = $config["defaultDOMHeader"];   
+            }
+
+            $XMLheader = "";
+            $XMLregExp = "~\\s*(<\\?[^>]*\\?>)\\s*~s";
+            if (preg_match($XMLregExp, $headLessContents, $matches)) {
+                $XMLHeader = $matches[1];
+                $headLessContents = preg_replace($XMLregExp, "", $headLessContents);
+            }
+            if (! $XMLHeader && $config["addXMLHeader"]) {
+                $XMLHeader = $config["defaultXMLHeader"];   
+            }
+
+            $defaultHTMLheader = $config["defaultHTMLheader"];
+            $defaultHTMLtrailer = "</html>";
+
+            $hasHTMLHeader = false;
+            $HTMLheader = $defaultHTMLheader;
+            $HTMLheaderRegExp = "~\\s*(<html[^>]*>)\\s*~s";
+            $HTMLtrailerRegExp = "~\\s*</html>\\s*~s";
+            if (preg_match($HTMLheaderRegExp, $headLessContents, $matches)) {
+                $HTMLheader = $matches[1];
+                $headLessContents = preg_replace($HTMLheaderRegExp, "", $headLessContents);
+                $headLessContents = preg_replace($HTMLtrailerRegExp, "", $headLessContents);
+                $hasHTMLHeader = true;
+            }
+
+            $rewrappedContents = 
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" .
+                $HTMLheader . $headLessContents . $defaultHTMLtrailer;
+
+            if ($freeUnusedStrings) {
+                $headLessContents = NULL;
+            }
+
 
             $dom = new DomDocument();
 
             if ($config["ignoreDOMParserErrors"]) {
                 libxml_use_internal_errors(true);
             }
-
-            $header = "";
-            $contents = $fileContents;
-
-            $contentRegExp = "/(((\s*<\\?[^>]*\\?>)|(\s*<![^>]*>))+)([\s\S]*)/s";
-            $matches = [];
-            $hasIsolatedContent = false;
-            if (preg_match($contentRegExp, $fileContents, $matches) && isset($matches[2])) {
-                $contents = $matches[5];
-                $hasIsolatedContent = true;
-            }
-
-            if ($hasIsolatedContent) {
-
-                if (! $config["lockHTMLHeader"]) {
-                    $headerRegExp = "/(((\s*<\\?[^>]*\\?>)|(\s*<![^>]*>))+\s*)([\s\S]*)/si";
-                }
-                else {
-                    $headerRegExp = "/(((\s*<\\?[^>]*\\?>)|(\s*<![^>]*>)|(\s*<\s*html[^>]*>))+\s*)([\s\S]*)/si";
-                }
-
-                $matches = [];
-                if (preg_match($headerRegExp, $fileContents, $matches)) {
-                    $header = $matches[1];
-                }
-
-            }
-
-            $originalContents = $contents;
-            if (! strpos("<?xml", $contents)) {
-                $contents = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" . $contents;
-            }
             
-            $dom->loadHTML($contents);
+            $dom->loadXML($rewrappedContents);
 
             if ($config["ignoreDOMParserErrors"]) {
                 libxml_clear_errors();
@@ -93,24 +117,89 @@ function main($droppedFile) {
             $isModified = $isModified || $isDomModified;
 
             if (! $isDomModified) {
-                $output = $originalContents;
+                $processedContents = $rewrappedContents;
             }
             else {
-                $output = $dom->saveXML($dom);
+                $processedContents = $dom->saveXML($dom);
             }
 
-            postProcessFile($config, $isModified, $output);
+            if ($freeUnusedStrings) {
+                $rewrappedContents = NULL;
+            }
 
-            if ($hasIsolatedContent && isset($header) && preg_match($headerRegExp, $output, $matches)) {
-                if (! $config["lockHTMLHeader"]) {
-                    $output = $header . $matches[5];
+            $postProcessedContents = $processedContents;
+
+            if ($freeUnusedStrings) {
+                $processedContents = NULL;
+            }
+
+            $postProcessModified = false;
+            postProcessFile($config, $postProcessModified, $postProcessedContents);
+            $isModified |=  $postProcessModified;
+
+            $headLessProcessedContents = $postProcessedContents;
+
+            if ($freeUnusedStrings) {
+                $postProcessedContents = NULL;
+            }
+
+            $headLessProcessedContents = preg_replace($DOMregExp, "", $headLessProcessedContents);
+            $headLessProcessedContents = preg_replace($XMLregExp, "", $headLessProcessedContents);
+            
+            if (preg_match($HTMLheaderRegExp, $headLessProcessedContents, $matches)) {
+                $postProcessedHTMLheader = $matches[0];
+                $headLessProcessedContents = preg_replace($HTMLheaderRegExp, "", $headLessProcessedContents);
+                $headLessProcessedContents = preg_replace($HTMLtrailerRegExp, "", $headLessProcessedContents);
+            }
+
+            $rewrappedPostProcessedContents = $headLessProcessedContents;
+
+            if ($freeUnusedStrings) {
+                $headLessProcessedContents = NULL;
+            }
+
+            if ($config["lockHTMLHeader"]) {
+                if ($hasHTMLHeader) {
+                    $rewrappedPostProcessedContents = $HTMLheader . "\n" . $rewrappedPostProcessedContents . "\n" . $defaultHTMLtrailer . "\n";
+                }
+                else if ($config["addHTMLHeader"]) {
+                    $rewrappedPostProcessedContents = $defaultHTMLheader . "\n" . $rewrappedPostProcessedContents . "\n" . $defaultHTMLtrailer . "\n";
+                }
+            }
+            else {
+                if ($postProcessedHTMLheader) {
+                    $rewrappedPostProcessedContents = $postProcessedHTMLheader . "\n" . $rewrappedPostProcessedContents . "\n" . $defaultHTMLtrailer . "\n";
                 }
                 else {
-                    $output = $header . $matches[6];
+                    $rewrappedPostProcessedContents = $defaultHTMLheader . "\n" . $rewrappedPostProcessedContents . "\n" . $defaultHTMLtrailer . "\n";
                 }
             }
 
-            postPostProcessFile($config, $isModified, $output);
+            if ($config["lockDOMHeader"]) {
+                if ($DOMheader) {
+                    $rewrappedPostProcessedContents = $DOMheader . "\n" . $rewrappedPostProcessedContents;
+                }
+                else if ($config["addDOMHeader"]) {
+                    $rewrappedPostProcessedContents = $defaultDOMHeader . "\n" . $rewrappedPostProcessedContents;
+                }
+            }
+            else {
+                $rewrappedPostProcessedContents = $defaultDOMHeader . "\n" . $rewrappedPostProcessedContents;
+            }
+                
+            if ($config["lockXMLHeader"]) {
+                if ($XMLheader) {
+                    $rewrappedPostProcessedContents = $XMLheader . "\n" . $rewrappedPostProcessedContents;
+                }
+                else if ($config["addXMLHeader"]) {
+                    $rewrappedPostProcessedContents = $defaultXMLHeader . "\n" . $rewrappedPostProcessedContents;
+                }
+            }
+            else {
+                $rewrappedPostProcessedContents = $defaultXMLHeader . "\n" . $rewrappedPostProcessedContents;
+            }
+
+            postPostProcessFile($config, $isModified, $rewrappedPostProcessedContents);
 
             if (! $isModified) {
                 echo "File " . basename($droppedFile) . " was not modified.\n";
@@ -119,7 +208,7 @@ function main($droppedFile) {
 
             makeBackup($config, $droppedFile);
 
-            writeFileContents($droppedFile, $output);
+            writeFileContents($droppedFile, $rewrappedPostProcessedContents);
 
             echo "Updated file " . basename($droppedFile) . ".\n";
             
@@ -289,7 +378,15 @@ function defaultConfig() {
 
     $config["acceptFileNameExtensions"] = [ "html", "htm", "xhtml" ];
     $config["backupFileNameExtension"]  = "old";
+    $config["lockDOMHeader"]            = true;
+    $config["lockXMLHeader"]            = true;
     $config["lockHTMLHeader"]           = true;
+    $config["addDOMHeader"]             = false;
+    $config["addXMLHeader"]             = false;
+    $config["addHTMLHeader"]            = false;
+    $config["defaultDOMHeader"]         = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">";
+    $config["defaultXMLHeader"]         = "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
+    $config["defaultHTMLheader"]        = "<html xmlns:epub=\"http://www.idpf.org/2007/ops\" xmlns=\"http://www.w3.org/1999/xhtml\">";
     $config["maxBackupCount"]           = 5;
     $config["logLevel"]                 = LOG_NONE;
     $config["logEntryExit"]             = false;
