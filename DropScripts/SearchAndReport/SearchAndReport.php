@@ -461,8 +461,6 @@ function init($droppedFile) {
 
             $config = defaultConfig();
 
-            $parentDir = dirname($filePath);
-
             $globalConfigFile = nearbyConfigFile(__FILE__);
             mergeConfig($config, $globalConfigFile);
 
