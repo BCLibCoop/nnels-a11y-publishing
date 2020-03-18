@@ -1192,7 +1192,7 @@ Inherits Application
 	#tag EndMethod
 
 	#tag Method, Flags = &h21
-		Private Function HandleDroppedFile(in_file as FolderItem) As Boolean
+		Private Function HandleDroppedFile(in_file as FolderItem, in_optionalEPUBFile as FolderItem = nil) As Boolean
 		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
 		    #Pragma DisableBoundsChecking
 		    #Pragma StackOverflowchecking False
@@ -1263,9 +1263,23 @@ Inherits Application
 		        Dim parentFolderShellPath as String
 		        parentFolderShellPath = in_file.Parent.ShellPath
 		        
-		        commandLine = """" + scriptInterpreterPath + """ " + fSelectedScript.ShellPath + " """ + parentFolderShellPath + "\" + in_file.Name + """"
+		        if in_optionalEPUBFile <> nil then
+		          
+		          Dim epubParentFolderShellPath as String
+		          epubParentFolderShellPath = in_optionalEPUBFile.Parent.ShellPath
+		          
+		          commandLine = """" + scriptInterpreterPath + """ " + fSelectedScript.ShellPath + " """ + parentFolderShellPath + "\" + in_file.Name + """" + " """ + epubParentFolderShellPath + "\" + in_optionalEPUBFile.Name + """"
+		        else
+		          commandLine = """" + scriptInterpreterPath + """ " + fSelectedScript.ShellPath + " """ + parentFolderShellPath + "\" + in_file.Name + """"
+		        end if
+		        
 		      #else
-		        commandLine = """" + scriptInterpreterPath + """ " + fSelectedScript.ShellPath + " " + in_file.ShellPath
+		        if in_optionalEPUBFile <> nil then
+		          commandLine = """" + scriptInterpreterPath + """ " + fSelectedScript.ShellPath + " " + in_file.ShellPath + " " + in_optionalEPUBFile.ShellPath
+		        else
+		          commandLine = """" + scriptInterpreterPath + """ " + fSelectedScript.ShellPath + " " + in_file.ShellPath
+		        end if
+		        
 		      #endif
 		      
 		      Log.LogNote CurrentMethodName, "commandLine = '" + commandLine + "'"
@@ -1348,16 +1362,15 @@ Inherits Application
 		        Exit
 		      end if
 		      
-		      dim s as string = decodeBase64("S1IwUjMxQ1JaejcyTFFHMXkrUzI=", encodings.UTF8)
+		      dim s as string = decodeBase64("S1IwUjMxOUZscmVYNWJ1SGQ3b0U=", encodings.UTF8)
 		      dim p as string = decodeBase64("TUJTIENvbXBsZXRl", encodings.UTF8)
 		      dim n as string = decodeBase64("Um9yb2hpa28gTHRkLg==", encodings.UTF8)
-		      dim e as integer = 201909
-		      dim t as string = decodeBase64("MEw0ZnpRdHJzTDc2MTdJMU53SDRoNXgwSExuKzJzVithc2FPRURRQzFBSj0=", encodings.UTF8)
+		      dim e as integer = 202009
+		      dim t as string = decodeBase64("S3V5Z1J5dzVQMHhSMTdJMUNzN2d0QXNkeXlFN3MvTTVPejNKY0hHQVBQdD0=", encodings.UTF8)
 		      
 		      if not registerMBSPlugin(n, p, e, s+t) then  
-		        MsgBox "MBS Plugin serial not valid?"
-		        Exit  
-		      end if
+		        MsgBox "MBS Plugin serial not valid?"  
+		      end if  
 		      
 		      Dim prefsFile as FolderItem
 		      prefsFile = GetPrefsFile
