@@ -369,7 +369,9 @@ Inherits Application
 		          if file.Directory then
 		            folders.Append file
 		          else
-		            io_folderContentDict.Value(file.NativePath) = true
+		            Dim hash as String 
+		            hash = MD5DigestMBS.HashFile(file)
+		            io_folderContentDict.Value(file.NativePath) = hash
 		          end if
 		          
 		        end if
@@ -1094,18 +1096,34 @@ Inherits Application
 		      
 		      success = true
 		      
+		      Dim changed as Boolean
 		      for each targetFile as FolderItem in targetFiles
 		        Dim fileSuccess as Boolean
-		        fileSuccess = HandleDroppedFile(targetFile)
+		        fileSuccess = HandleDroppedFile(targetFile, in_epubFile)
 		        if fileSuccess then
 		          Log.LogNote "Success: processed " + targetFile.Name
 		        else
 		          Log.LogError "Failure: attempted to process " + targetFile.Name
 		        end if
 		        
+		        if not changed then
+		          Dim beforeHash as String
+		          beforeHash = beforeContentDict.Value(targetFile.NativePath)
+		          Dim afterHash as String
+		          afterHash = MD5DigestMBS.HashFile(targetFile)
+		          changed = beforeHash <> afterHash
+		        end if
+		        
 		        success = fileSuccess and success
 		        
 		      next
+		      
+		      if not changed then
+		        Log.LogNote CurrentMethodName, "nothing was changed"
+		        success = DeleteFolder(fTemporaryDecompressedEPUB) = 0
+		        fTemporaryDecompressedEPUB = nil
+		        Exit
+		      end if
 		      
 		      if not CleanupFolderContent(fTemporaryDecompressedEPUB, beforeContentDict) then
 		        Log.LogError CurrentMethodName, "cannot clean up backup files"
