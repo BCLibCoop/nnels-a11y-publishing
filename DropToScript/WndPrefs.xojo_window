@@ -272,7 +272,6 @@ Begin Window WndPrefs
       LockLeft        =   True
       LockRight       =   False
       LockTop         =   False
-      MenuValue       =   "0"
       Scope           =   2
       TabIndex        =   12
       TabPanelIndex   =   0
@@ -317,7 +316,6 @@ Begin Window WndPrefs
       LockLeft        =   True
       LockRight       =   False
       LockTop         =   False
-      MenuValue       =   "0"
       Scope           =   2
       TabIndex        =   13
       TabPanelIndex   =   0

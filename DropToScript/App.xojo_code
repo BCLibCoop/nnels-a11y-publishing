@@ -71,6 +71,40 @@ Inherits Application
 	#tag EndMethod
 
 	#tag Method, Flags = &h21
+		Private Sub AddFileCountToProcess(in_fileCount as Integer)
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  Do 
+		    
+		    Try
+		      
+		      fUISemaphore.Signal
+		      fFileCountToProcess = fFileCountToProcess + in_fileCount
+		      fUISemaphore.Release
+		      
+		      fThread.AddUserInterfaceUpdate
+		      
+		    Catch e As RuntimeException
+		      Log.LogError CurrentMethodName, "throws " + e.Message
+		    End Try
+		    
+		  Loop Until true
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogExit CurrentMethodName
+		  #EndIf
+		  
+		End Sub
+	#tag EndMethod
+
+	#tag Method, Flags = &h21
 		Private Sub AddFiles(in_zipFile as ZipMBS, in_dir as FolderItem, in_prefix as String)
 		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
 		    #Pragma DisableBoundsChecking
@@ -140,7 +174,17 @@ Inherits Application
 		    Try
 		      
 		      fReport = fReport + in_message + EndOfLine
-		      WndReport.ShowLogLine in_message
+		      if CurrentThread = nil then
+		        WndReport.ShowLogLine in_message
+		      else
+		        fUISemaphore.Signal
+		        if fThreadReportLines <> "" then
+		          fThreadReportLines = fThreadReportLines + EndOfLine + in_message
+		        else
+		          fThreadReportLines = in_message
+		        end if
+		        fUISemaphore.Release
+		      end if
 		      
 		    Catch e As RuntimeException
 		      Log.LogError CurrentMethodName, "throws " + e.Message
@@ -711,6 +755,7 @@ Inherits Application
 		    Try
 		      
 		      success = Init
+		      
 		      if not success then
 		        Log.LogError CurrentMethodName + ": init failed"
 		        Exit
@@ -721,20 +766,24 @@ Inherits Application
 		        Log.LogNote "Using script " + fSelectedScript.Name
 		        
 		        success = true
-		        for idx as integer = 0 to UBound(fDocumentQueue)
-		          Dim droppedFile as FolderItem
-		          droppedFile = fDocumentQueue(idx)
-		          Dim fileSuccess as Boolean
-		          fileSuccess = HandleDroppedFile(droppedFile)
-		          if fileSuccess then
-		            Log.LogNote "Success: processed " + droppedFile.Name
-		          else
-		            Log.LogError "Failure: attempted to process " + droppedFile.Name
-		          end if
-		          success = fileSuccess and success
-		        next
+		        
+		        fThreadSuccess = true
+		        
+		        fThread.Start
+		        while fThread.State <> Thread.NotRunning
+		          UserinterfaceUpdate
+		          App.DoEvents 1000
+		        wend
+		        
+		        fSelectedScript = nil
+		        UserinterfaceUpdate
+		        
+		        success = fThreadSuccess
+		        
 		        ReportAndQuit
+		        
 		        Exit
+		        
 		      end if
 		      
 		      if UBound(fDocumentQueue) < 0 then
@@ -748,22 +797,22 @@ Inherits Application
 		      
 		      fSelectedScript = WndSelectScript.ChooseScript
 		      success = true
+		      
 		      if fSelectedScript <> nil then
 		        
-		        Log.LogNote "Using script " + fSelectedScript.Name
+		        fThreadSuccess = true
+		        fThread.Start
 		        
-		        for idx as integer = 0 to UBound(fDocumentQueue)
-		          Dim droppedFile as FolderItem
-		          droppedFile = fDocumentQueue(idx)
-		          Dim fileSuccess as Boolean
-		          fileSuccess = HandleDroppedFile(droppedFile)
-		          if fileSuccess then
-		            Log.LogNote "Success: processed " + droppedFile.Name
-		          else
-		            Log.LogError "Failure: attempted to process " + droppedFile.Name
-		          end if
-		          success = fileSuccess and success
-		        next
+		        while fThread.State <> Thread.NotRunning
+		          UserinterfaceUpdate
+		          App.DoEvents 1000
+		        wend
+		        
+		        fSelectedScript = nil
+		        UserinterfaceUpdate
+		        
+		        success = fThreadSuccess
+		        
 		      end if
 		      
 		      if not success then
@@ -1096,8 +1145,16 @@ Inherits Application
 		      
 		      success = true
 		      
+		      Dim fileCount as integer
+		      fileCount = UBound(targetFiles) + 1
+		      
+		      AddFileCountToProcess fileCount
+		      
 		      Dim changed as Boolean
 		      for each targetFile as FolderItem in targetFiles
+		        
+		        fThread.AddUserInterfaceUpdate
+		        
 		        Dim fileSuccess as Boolean
 		        fileSuccess = HandleDroppedFile(targetFile, in_epubFile)
 		        if fileSuccess then
@@ -1209,7 +1266,11 @@ Inherits Application
 		    
 		    Try
 		      
+		      fUISemaphore.Signal
 		      fFileCount = fFileCount + 1
+		      fUISemaphore.Release
+		      
+		      fThread.AddUserInterfaceUpdate
 		      
 		      if in_file = nil then
 		        Log.LogError CurrentMethodName, "in_file is nil"
@@ -1286,6 +1347,7 @@ Inherits Application
 		      
 		      Dim sh as Shell
 		      sh = new Shell
+		      sh.TimeOut = -1
 		      sh.Execute commandLine
 		      
 		      if sh.ErrorCode <> 0 then
@@ -1311,7 +1373,7 @@ Inherits Application
 		          if Left(line, Len(OUTPUTPREFIX)) = OUTPUTPREFIX then
 		            AddToScriptOutput Mid(line, Len(OUTPUTPREFIX) + 1)
 		          else
-		            Log.LogNote output
+		            Log.LogNote line
 		          end if
 		        next
 		        
@@ -1362,15 +1424,10 @@ Inherits Application
 		        Exit
 		      end if
 		      
-		      dim s as string = decodeBase64("S1IwUjMxOUZscmVYNWJ1SGQ3b0U=", encodings.UTF8)
-		      dim p as string = decodeBase64("TUJTIENvbXBsZXRl", encodings.UTF8)
-		      dim n as string = decodeBase64("Um9yb2hpa28gTHRkLg==", encodings.UTF8)
-		      dim e as integer = 202009
-		      dim t as string = decodeBase64("S3V5Z1J5dzVQMHhSMTdJMUNzN2d0QXNkeXlFN3MvTTVPejNKY0hHQVBQdD0=", encodings.UTF8)
-		      
-		      if not registerMBSPlugin(n, p, e, s+t) then  
-		        MsgBox "MBS Plugin serial not valid?"  
-		      end if  
+		      // MBS registration: CPrivateData is not committed to repo because it contains
+		      // personal registration info. Replace this with license data purchased from 
+		      // MonkeyBread.
+		      CPrivateData.RegisterMBS
 		      
 		      Dim prefsFile as FolderItem
 		      prefsFile = GetPrefsFile
@@ -1524,6 +1581,11 @@ Inherits Application
 		    
 		    Try
 		      
+		      if fUISemaphore = nil then
+		        fUISemaphore = new Semaphore
+		        fThread = new CProcessingThread
+		      end if
+		      
 		      Log.SetLogLevel Log.NONE
 		      
 		      fFinalizeStartupTimer = new CFinalizeStartupTimer
@@ -1556,6 +1618,13 @@ Inherits Application
 		  #EndIf
 		  
 		  Try
+		    
+		    if fUISemaphore = nil then
+		      fUISemaphore = new Semaphore
+		      fThread = new CProcessingThread
+		    end if
+		    
+		    AddFileCountToProcess 1
 		    
 		    fDocumentQueue.Append in_file
 		    
@@ -1617,6 +1686,74 @@ Inherits Application
 		End Sub
 	#tag EndMethod
 
+	#tag Method, Flags = &h0
+		Sub Thread_ProcessQueue()
+		  #If Cfg.DISABLE_COMPILER_RUNTIME_CHECKS
+		    #Pragma DisableBoundsChecking
+		    #Pragma StackOverflowchecking False
+		    #Pragma NilObjectChecking False
+		  #EndIf
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  Do 
+		    
+		    Try
+		      
+		      for idx as integer = 0 to UBound(fDocumentQueue)
+		        
+		        Dim droppedFile as FolderItem
+		        droppedFile = fDocumentQueue(idx)
+		        Dim fileSuccess as Boolean
+		        fileSuccess = HandleDroppedFile(droppedFile)
+		        if fileSuccess then
+		          Log.LogNote "Success: processed " + droppedFile.Name
+		        else
+		          Log.LogError "Failure: attempted to process " + droppedFile.Name
+		        end if
+		        
+		        fThreadSuccess = fileSuccess and fThreadSuccess
+		        
+		      next
+		      
+		    Catch e As RuntimeException
+		      if not e isa EndException then
+		        Log.LogError CurrentMethodName, "throws " + e.Message
+		      end if
+		      fThreadSuccess = false
+		    End Try
+		    
+		  Loop Until True
+		  
+		  #If Cfg.IS_ENTRY_EXIT_LOGGING
+		    Log.LogEntry CurrentMethodName
+		  #EndIf
+		  
+		  
+		End Sub
+	#tag EndMethod
+
+	#tag Method, Flags = &h0
+		Sub UserinterfaceUpdate()
+		  if fUISemaphore.TrySignal then
+		    
+		    WndProgress.Update fFileCount, fFileCountToProcess, fSelectedScript
+		    
+		    if fThreadReportLines <> "" then
+		      Dim reportLines as String
+		      reportLines = fThreadReportLines
+		      fThreadReportLines = ""
+		      WndReport.ShowLogLine reportLines
+		    end if
+		    
+		    fUISemaphore.Release
+		    
+		  end if
+		End Sub
+	#tag EndMethod
+
 
 	#tag Property, Flags = &h21
 		Private fDocumentQueue() As FolderItem
@@ -1624,6 +1761,10 @@ Inherits Application
 
 	#tag Property, Flags = &h21
 		Private fFileCount As Integer
+	#tag EndProperty
+
+	#tag Property, Flags = &h21
+		Private fFileCountToProcess As Integer = 0
 	#tag EndProperty
 
 	#tag Property, Flags = &h21
@@ -1660,6 +1801,22 @@ Inherits Application
 
 	#tag Property, Flags = &h21
 		Private fTemporaryDecompressedEPUB As FolderItem
+	#tag EndProperty
+
+	#tag Property, Flags = &h21
+		Private fThread As CProcessingThread
+	#tag EndProperty
+
+	#tag Property, Flags = &h21
+		Private fThreadReportLines As String
+	#tag EndProperty
+
+	#tag Property, Flags = &h21
+		Private fThreadSuccess As Boolean
+	#tag EndProperty
+
+	#tag Property, Flags = &h21
+		Private fUISemaphore As Semaphore
 	#tag EndProperty
 
 
