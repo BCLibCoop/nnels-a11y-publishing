@@ -15,7 +15,7 @@ else if (file_exists(__DIR__ . "/../DropScriptTemplate/GlobalSearchAndReplace.ph
 // Any code below this line will be auto-updated from the DropScriptTemplate.php. If this file is not
 // called 'DropScriptTemplate.php' you should avoid editing it and instead edit DropScriptTemplate.php
 
-function main($droppedFile) {
+function main($droppedFile, $optionalEPUBFile) {
 
     do { // non-loop
 
@@ -23,7 +23,7 @@ function main($droppedFile) {
 
             $freeUnusedStrings = true;
 
-            $config = init($droppedFile);
+            $config = init($droppedFile, $optionalEPUBFile);
 
             if (! file_exists($droppedFile)) {
                 logWarning("main: file does not exist " . $droppedFile);
@@ -62,8 +62,10 @@ function main($droppedFile) {
                 $DOMheader = $matches[1];
                 $headLessContents = preg_replace($DOMregExp, "", $headLessContents);
             }
+
+            $defaultDOMHeader = $config["defaultDOMHeader"];
             if (! $DOMheader && $config["addDOMHeader"]) {
-                $DOMheader = $config["defaultDOMHeader"];   
+                $DOMheader = $defaultDOMHeader;
             }
 
             $XMLheader = "";
@@ -72,8 +74,10 @@ function main($droppedFile) {
                 $XMLheader = $matches[1];
                 $headLessContents = preg_replace($XMLregExp, "", $headLessContents);
             }
+
+            $defaultXMLHeader = $config["defaultXMLHeader"];
             if (! $XMLheader && $config["addXMLHeader"]) {
-                $XMLheader = $config["defaultXMLHeader"];   
+                $XMLheader = $defaultXMLHeader;
             }
 
             $defaultHTMLheader = $config["defaultHTMLheader"];
@@ -287,7 +291,7 @@ function commented_json_decode($in_json) {
                     break;
 
                     case JSON_PARSE_STATE_SEEN_DOUBLE_SLASH: {
-                        if ($c == "\n" || c == "\r") {
+                        if ($c == "\n" || $c == "\r") {
                             $decoded_json .= $c;
                             $state = JSON_PARSE_STATE_IDLE;
                         }
@@ -400,7 +404,7 @@ function defaultConfig() {
 
 // --
 
-function init($droppedFile) {
+function init($droppedFile, $optionalEPUBFile) {
 
     global $LOGLEVEL;
     global $LOG_ENTRY_EXIT;
@@ -425,7 +429,13 @@ function init($droppedFile) {
             logNote("attempt to load optional local config " . $localConfigFile);
             mergeConfig($config, $localConfigFile);
 
-            // Allow over-riding 
+            if (isset($optionalEPUBFile)) {
+                $epubConfigFile = nearbyConfigFile($optionalEPUBFile);
+                logNote("attempt to load optional epub-local config " . $epubConfigFile);
+                mergeConfig($config, $epubConfigFile);
+            }
+
+            // Allow over-riding
 
             $LOGLEVEL = $config["logLevel"];
             $LOG_TO_FILE = $config["logToFile"];
@@ -434,6 +444,10 @@ function init($droppedFile) {
 
             $config["droppedFilePath"] = $droppedFile;            
             $config["droppedFileName"] = basename($droppedFile);
+            if ($optionalEPUBFile) {
+                $config["epubFilePath"] = $optionalEPUBFile;
+                $config["epubFileName"] = basename($optionalEPUBFile);
+            }
         }
         catch (Exception $e) {
             // Logging might not work yet. Use echo
@@ -516,8 +530,8 @@ function logMessage($message) {
 
         $logFile = fopen($LOG_TO_FILE, "a");
         if ($logFile) {
-            fwrite($outFile, $message . "\n");
-            fclose($outFile);        
+            fwrite($logFile, $message . "\n");
+            fclose($logFile);
         }
     }
 
@@ -777,4 +791,4 @@ function writeFileContents($filePath, $content) {
 
 }
 
-main($argv[1]);
+main($argv[1], $argv[2]);
