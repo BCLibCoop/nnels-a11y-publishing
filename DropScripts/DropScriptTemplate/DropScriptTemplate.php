@@ -46,13 +46,13 @@ function main($droppedFile, $optionalEPUBFile) {
             $config = init($droppedFile, $optionalEPUBFile);
 
             if (! file_exists($droppedFile)) {
-                logWarning("main: file does not exist " . $droppedFile);
+                logWarning(__METHOD__ . ": file does not exist " . $droppedFile);
                 break;
             }
 
             if (! isAcceptedFile($config, $droppedFile)) {
                 echo "File " . basename($droppedFile) . " was not modified.\n";
-                logWarning("main: file not accepted for processing " . $droppedFile);
+                logWarning(__METHOD__ . ": file not accepted for processing " . $droppedFile);
                 break;
             }
 
@@ -122,20 +122,102 @@ function main($droppedFile, $optionalEPUBFile) {
                 $headLessContents = NULL;
             }
 
+            $domXML = new DomDocument();
+            $domHTML = new DomDocument();
 
-            $dom = new DomDocument();
+            libxml_use_internal_errors(true);
 
-            if ($config["ignoreDOMParserErrors"]) {
-                libxml_use_internal_errors(true);
+            $isXML = false;
+            $xmlErrorCount = 0;
+            $isHTML = false;
+            $htmlErrorCount = 0;
+
+            $parseAs = strtolower($config["parseAs"]);
+            $parseAsXML = $parseAs == "xml";
+            $parseAsHTML =  $parseAs == "html";
+            if (! ($parseAsXML || $parseAsHTML)) {
+                $parseAsXML = true;
+                $parseAsHTML = true;
             }
-            
-            $dom->loadXML($rewrappedContents);
 
-            if ($config["ignoreDOMParserErrors"]) {
+            $forceSaveAs = strtolower($config["forceSaveAs"]);
+            $forceSaveAsXML = $forceSaveAs == "xml";
+            $forceSaveAsHTML =  $forceSaveAs == "html";
+
+            if ($parseAsXML) {
+                logNote(__METHOD__ . ": Attempting to parse input as XML");
+                $prefix = "XML";
+                $domXML->loadXML($rewrappedContents);
+                if ($domXML->hasChildNodes()) {
+                    $isXML = true;
+                }
+                else {
+                    logError(__METHOD__ . ": the input file is not valid XML");
+                }
+                $errors = libxml_get_errors();
+                $xmlErrorCount = count($errors);
+                if (! $config["ignoreDOMParserErrors"]) {
+                    if ($xmlErrorCount != 0) {
+                        $rewrappedContentLines = explode("\012", $rewrappedContents);
+                        foreach ($errors as $error) {
+                            logXMLError($prefix, $error, $rewrappedContentLines);
+                        }
+                    }
+                }
                 libxml_clear_errors();
             }
-            
+
+            if ($parseAsHTML) {
+                logNote(__METHOD__ . ": Attempting to parse input as HTML");
+                $prefix = "HTML";
+                $domHTML->loadHTML($rewrappedContents);
+                if ($domHTML->hasChildNodes()) {
+                    $isHTML = true;
+                }
+                else {
+                    logError(__METHOD__ . ": the input file is not valid HTML");
+                }
+                $errors = libxml_get_errors();
+                $htmlErrorCount = count($errors);
+                if (! $config["ignoreDOMParserErrors"]) {
+                    if ($htmlErrorCount != 0) {
+                        $rewrappedContentLines = explode("\012", $rewrappedContents);
+                        foreach ($errors as $error) {
+                            logXMLError($prefix, $error, $rewrappedContentLines);
+                        }
+                    }
+                }
+                libxml_clear_errors();
+            }
+
+            if ($isXML && $xmlErrorCount == 0) {
+                $isHTML = false;
+            }
+            else if ($isHTML && $htmlErrorCount == 0) {
+                $isXML = false;
+            }
+            else if ($isXML && $isHTML) {
+                if ($xmlErrorCount <= $htmlErrorCount) {
+                    $isHTML = false;
+                }
+                else {
+                    $isXML = false;
+                }
+            }
+
             $isDomModified = false;
+            if (! $isXML && ! $isHTML) {
+                break;
+            }
+
+            if ($isHTML) {
+                $dom = $domHTML;
+            }
+            else {
+                $dom = $domXML;
+            }
+
+
             processDOM($config, $isDomModified, $dom);
 
             $isModified = $isModified || $isDomModified;
@@ -144,7 +226,15 @@ function main($droppedFile, $optionalEPUBFile) {
                 $processedContents = $rewrappedContents;
             }
             else {
-                $processedContents = $dom->saveXML($dom);
+                if ($isXML || $forceSaveAsXML) {
+                    $processedContents = $dom->saveXML($dom);
+                }
+                else if ($isHTML || $forceSaveAsHTML) {
+                    $processedContents = $dom->saveHTML($dom);
+                }
+                else {
+                    $processedContents = $rewrappedContents;
+                }
             }
 
             if ($freeUnusedStrings) {
@@ -211,19 +301,25 @@ function main($droppedFile, $optionalEPUBFile) {
                 $rewrappedPostProcessedContents = $defaultDOMHeader . "\n" . $rewrappedPostProcessedContents;
             }
                 
-            if ($config["lockXMLHeader"]) {
-                if ($XMLheader) {
-                    $rewrappedPostProcessedContents = $XMLheader . "\n" . $rewrappedPostProcessedContents;
+            if ($isXML) {
+                if ($config["lockXMLHeader"]) {
+                    if ($XMLheader) {
+                        $rewrappedPostProcessedContents = $XMLheader . "\n" . $rewrappedPostProcessedContents;
+                    }
+                    else if ($config["addXMLHeader"]) {
+                        $rewrappedPostProcessedContents = $defaultXMLHeader . "\n" . $rewrappedPostProcessedContents;
+                    }
                 }
-                else if ($config["addXMLHeader"]) {
+                else {
                     $rewrappedPostProcessedContents = $defaultXMLHeader . "\n" . $rewrappedPostProcessedContents;
                 }
             }
-            else {
-                $rewrappedPostProcessedContents = $defaultXMLHeader . "\n" . $rewrappedPostProcessedContents;
-            }
 
             postPostProcessFile($config, $isModified, $rewrappedPostProcessedContents);
+
+            if ($rewrappedPostProcessedContents == $fileContents) {
+                $isModified = false;
+            }
 
             if (! $isModified) {
                 echo "File " . basename($droppedFile) . " was not modified.\n";
@@ -238,10 +334,1899 @@ function main($droppedFile, $optionalEPUBFile) {
             
         }
         catch (Exception $e) {
-            logError("main: throws " . $e->getMessage());
+            logError(__METHOD__ . ": throws " . $e->getMessage());
         }
     }
     while (false); // non-loop
+
+}
+
+function logXMLError($prefix, $error, $xml)
+{
+    $message = $xml[$error->line - 1] . "\n";
+    $message .= str_repeat('-', $error->column) . "^";
+
+    $message .= trim($error->message) . "\n" .
+               "  Line: $error->line" .
+               "  Column: $error->column" . "\n";
+
+    switch ($error->level) {
+        case LIBXML_ERR_WARNING:
+            logWarning(__METHOD__ . $prefix . ":\n" . $message);
+            break;
+         case LIBXML_ERR_ERROR:
+            logError(__METHOD__ . $prefix . ":\n" . $message);
+            break;
+        case LIBXML_ERR_FATAL:
+            logError(__METHOD__ . $prefix . ":\n" . $message);
+            break;
+    }
+}
+
+class ProtectedObject
+{
+protected $error = false;
+    
+protected function __construct($defaults = null) 
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        if (! $defaults)
+        {
+            break;
+        }
+
+        $error = false;
+    }
+    while (false);          
+
+    logExit(__METHOD__);
+}
+
+// ****************
+
+}
+
+class Utils
+{
+const OS_UNKNOWN  = 0;
+const OS_OSX      = 1;
+const OS_WINDOWS  = 2;
+const OS_LINUX    = 3;
+
+const kCRLF = "\r\n";
+const kCR = "\r";
+const kLF = "\n";
+
+const kPlatformMac                      = "Mac";
+const kPlatformWin                      = "Win";
+const kPlatformLinux                    = "Lin";
+const kPlatformUnknown                  = "Unk";
+
+const kDespaceRegExp                    = "/\s+/";
+const kTrimRegExp                       = "/^\s*(.*?)\s*$/";
+
+private static $gPlatform = "";
+
+// ****************
+
+public static function getPlatform() // Static
+{
+    logEntry(__METHOD__);
+    
+    if (self::$gPlatform == "")
+    {
+        $os = self::getOS();
+        switch ($os)
+        {
+            default:
+                self::$gPlatform = self::kPlatformUnknown;
+                break;
+            case self::OS_OSX:
+                self::$gPlatform = self::kPlatformMac;
+                break;
+            case self::OS_WINDOWS:
+                self::$gPlatform = self::kPlatformWin;
+                break;
+            case self::OS_LINUX:
+                self::$gPlatform = self::kPlatformLinux;
+                break;
+        }
+    }
+    
+    logExit(__METHOD__);        
+    
+    return self::$gPlatform;
+}
+
+// ****************
+
+public static function despace($value) // Static
+{
+    logEntry(__METHOD__);
+
+    $retVal = (! $value) ? "" : $value;
+    $retVal = preg_replace(Utils::kDespaceRegExp, "", $retVal);
+
+    logExit(__METHOD__);        
+    
+    return $retVal;
+}
+
+// ****************
+
+public static function getOS()
+{
+    logEntry(__METHOD__);
+    
+    $retVal = self::OS_UNKNOWN;
+    $os = strtoupper(PHP_OS);
+    if (stristr($os, 'DAR'))
+    {
+        $retVal = self::OS_OSX;
+    }
+    else if (stristr($os, 'WIN'))
+    {
+        $retVal = self::OS_WINDOWS;
+    }
+    else if (stristr($os, 'LIN'))
+    {
+        $retVal = self::OS_LINUX;
+    }
+
+    logExit(__METHOD__);        
+
+    return $retVal;
+}
+    
+// ****************
+
+public static function expandTilde($path) 
+{
+    logEntry(__METHOD__);
+    
+    if (function_exists('posix_getuid') && strpos($path, '~') !== false) 
+    {
+        $info = posix_getpwuid(posix_getuid());
+        $path = str_replace('~', $info['dir'], $path);
+    }
+
+    logExit(__METHOD__);        
+    
+    return $path;
+}
+
+// ****************
+
+public static function msgBox($message)
+{
+    logEntry(__METHOD__);
+    
+    $os = self::getOS();
+    if ($os == self::OS_OSX)
+    {
+        $command = "osascript -e \"display dialog \\\"" . $message . "\\\" buttons {\\\"OK\\\"}\" 2>^1 > /dev/null";
+        system($command);
+    }
+    
+    logExit(__METHOD__);        
+
+}
+
+// ****************
+
+public static function setTimezone($default) 
+{
+    logEntry(__METHOD__);
+    
+    $timezone = $default;
+
+    if (is_link("/etc/localtime")) 
+    {
+        // If it is, that file's name is actually the "Olsen" format timezone
+        $filename = readlink("/etc/localtime");
+
+        $pos = strpos($filename, "zoneinfo");
+        if ($pos) 
+        {
+            // When it is, it's in the "/usr/share/zoneinfo/" folder
+            $systemTimezone = substr($filename, $pos + strlen("zoneinfo/"));
+            $timezone = $systemTimezone;
+        }
+    }
+    else 
+    {
+        // On other systems, like Ubuntu, there's file with the Olsen time
+        // right inside it.
+        $systemTimezone = file_get_contents("/etc/timezone");
+        if ($systemTimezone && strlen($systemTimezone)) 
+        {
+            $timezone = $systemTimezone;
+        }
+    }
+    
+    date_default_timezone_set($timezone);
+    
+    logExit(__METHOD__);        
+}
+
+// ****************
+
+public static function stringToBooleanValue($valueString, $defaultValue)
+{
+    logEntry(__METHOD__);
+
+    $value = $defaultValue;
+    do
+    {
+        try
+        {
+            if ($valueString === null)
+            {
+                $value = $defaultValue;
+                break;
+            }
+        
+            $intValue = Utils::toInt($valueString);
+            if ($intValue != 0)
+            {
+                $value = true;
+                break;
+            }
+            
+            $valueString = strtolower(substr($valueString,0,1));
+            if ($valueString == "y" || $valueString == "t")
+            {
+                $value = true;
+                break;
+            }
+        
+            $value = false;
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);        
+
+    return $value;
+}        
+
+// ****************
+
+public static function toFloat($valueString)
+{
+    logEntry(__METHOD__);
+
+    $value = 0;
+    do
+    {
+        try
+        {
+            $value = floatval($valueString);                    
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);        
+
+    return $value;
+}        
+
+// ****************
+
+public static function toInt($valueString, $base = 10)
+{
+    logEntry(__METHOD__);
+
+    $value = 0;
+    do
+    {
+        try
+        {
+            $value = intval($valueString, $base);                    
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);        
+
+    return $value;
+}  
+
+// ****************
+
+public static function trim($value) // Static
+{
+    logEntry(__METHOD__);
+
+    $retVal = (! $value) ? "" : $value;
+    $retVal = preg_replace(Utils::kTrimRegExp, "$1", $retVal);
+
+    logExit(__METHOD__);        
+    
+    return $retVal;
+}
+
+// ****************
+
+}
+
+class Ini extends ProtectedObject
+{
+const kEOL = "\n";
+const kIniSection_Main = "main";
+
+private $sections = null;
+private $dirty = null;
+private $caseSensitive = null;
+private $parent = null;
+
+protected function __construct($defaults = null) 
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        try
+        {
+            parent::__construct($defaults);
+            if (! $defaults)
+            {
+                break;
+            }
+
+            if (! property_exists($defaults, "caseSensitive") || ! $defaults->caseSensitive)
+            {
+                $this->caseSensitive = false;
+            }
+            else
+            {
+                $this->caseSensitive = true;
+            }
+
+            if (property_exists($defaults, "parent") && $defaults->parent)
+            {
+                $this->parent = $defaults->parent;
+            }
+            else
+            {
+                $this->parent = null;
+            }
+
+            $this->dirty = false;
+
+            $iniString = null;
+            if (property_exists($defaults, "iniString"))
+            {
+                $iniString = $defaults->iniString;
+            }
+
+            if (! $iniString)
+            {
+                break;
+            }
+
+            $this->setIniString($iniString);
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+            $this->error = true;
+        }
+    }
+    while (false);          
+
+    logExit(__METHOD__);
+}
+
+// ****************
+
+public static function factory($defaults)
+{
+    logEntry(__METHOD__);
+
+    try
+    {
+        $retVal = new Ini($defaults);
+        if ($retVal->error)
+        {
+            $retVal = null;
+        }
+    }
+    catch (Exception $exception)
+    {
+        logError(__METHOD__ . ": throws " + $exception->getMessage());
+        $retVal = null;
+    }
+
+    logExit(__METHOD__);
+
+    return $retVal; 
+}
+
+// ****************
+
+public function clear()
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        try
+        {
+            $this->clearDirty();
+            $this->sections = null;
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+}        
+
+// ****************
+
+public function clearDirty()
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        try
+        {
+            $this->dirty = false;
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+}        
+
+// ****************
+
+public function deleteSection($sectionName)
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        try
+        {
+            $section = $this->getSection($sectionName);
+            if (! $section)
+            {
+                break;
+            }
+
+            if (! $this->caseSensitive)
+            {
+                $sectionName = strtolower($sectionName);
+            }
+
+            unset($this->sections[$sectionName]);
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+}        
+
+// ****************
+
+public function getFileValue($sectionName, $iniKey, $defaultValue = null)
+{
+    logEntry(__METHOD__);
+
+    $value = null;
+    do
+    {
+        try
+        {
+            $value = $this->getFileValue_protected($sectionName, $iniKey, $defaultValue);
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $value;
+}        
+
+// ****************
+
+protected function getFileValue_protected_($sectionName, $iniKey, $defaultValue = null)
+{
+    logEntry(__METHOD__);
+
+    $value = null;
+    do
+    {
+        try
+        {
+            $value = $this->getValue($sectionName, $iniKey);
+            if ($value === null)
+            {
+                $value = $defaultValue;
+                break;
+            }
+
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $value;
+}        
+
+// ****************
+
+public function getBooleanValue($sectionName, $iniKey, $defaultValue = false)
+{
+    logEntry(__METHOD__);
+
+    $value = $defaultValue;
+    do
+    {
+        try
+        {
+            $value = $this->getValue($sectionName, $iniKey);
+            if ($value === null)
+            {
+                $value = $defaultValue;
+                break;
+            }
+
+            $value = Utils::stringToBooleanValue($value, $defaultValue);
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $value;
+}        
+
+// ****************
+
+public function getFloatValue($sectionName, $iniKey, $defaultValue = 0.0)
+{
+    logEntry(__METHOD__);
+
+    $value = $defaultValue;
+    do
+    {
+        try
+        {
+            $value = $this->getValue($sectionName, $iniKey);
+            if ($value === null)
+            {
+                $value = $defaultValue;
+                break;
+            }
+
+            $value = Utils::toFloat($value);
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $value;
+}        
+
+// ****************
+
+public function getIniString()
+{
+    logEntry(__METHOD__);
+
+    $iniString = "";
+    do
+    {
+        try
+        {
+            if (! $this->sections)
+            {
+                logError(__METHOD__ . ": sections should be defined");
+                break;
+            }
+
+            $iniEmpty = true;
+            foreach ($this->sections as $sectionName => $section)
+            {
+                $sectionDataSeen = false;
+                foreach ($section as $iniKey => $value)
+                {
+                    if ($value !== null)
+                    {
+                        if (! $sectionDataSeen)
+                        {
+                            if (! $iniEmpty)
+                            {
+                                $iniString .= Ini::kEOL . Ini::kEOL;
+                            }
+
+                            $iniString .= "[" . $sectionName . "]" . Ini::kEOL . Ini::kEOL;
+                            $sectionDataSeen = true;
+                        }
+                        $iniString .= $iniKey . "=\"" . $value . "\"" . Ini::kEOL;
+                        $iniEmpty = false;
+                    }
+                }
+            }
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $iniString;
+}        
+
+// ****************
+
+public function getIntValue($sectionName, $iniKey, $defaultValue = 0)
+{
+    logEntry(__METHOD__);
+
+    $value = $defaultValue;
+    do
+    {
+        try
+        {
+            $value = $this->getValue($sectionName, $iniKey);
+            if ($value === null)
+            {
+                $value = $defaultValue;
+                break;
+            }
+
+            $value = Utils::toInt($value);
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $value;
+}        
+
+// ****************
+
+private function &getSection($sectionName)
+{
+    logEntry(__METHOD__);
+
+    $section = null;
+    do
+    {
+        try
+        {
+            if (! $sectionName || $sectionName == "")
+            {
+                Logging.logError(__METHOD__ . ": needs $sectionName");
+                break;
+            }
+
+            if (! $this->sections)
+            {
+                break;
+            }
+
+            if (! $this->caseSensitive)
+            {
+                $sectionName = strtolower($sectionName);
+            }
+
+            if (! array_key_exists($sectionName, $this->sections)) 
+            {
+                break;
+            }
+            
+            $section = &$this->sections[$sectionName];
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+    
+    return $section;
+}
+
+// ****************
+
+public function getSectionKeys($sectionName) // Do not override. Override _protected_ variant instead
+{
+    logEntry(__METHOD__);
+
+    $retVal = null;
+
+    do
+    {
+        try
+        {
+            $retVal = $this->getSectionKeys_protected_($sectionName);
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $retVal;
+}        
+
+// ****************
+
+protected function getSectionKeys_protected_($sectionName) // Overrideable
+{
+    logEntry(__METHOD__);
+
+    $retVal = null;
+
+    do
+    {
+        try
+        {
+            $retValDict = [];
+            $parent = $this->parent;
+            if ($parent)
+            {
+                $retVal = $parent->getSectionKeys_protected_($sectionName);
+                if ($retVal)
+                {
+                    foreach ($retVal as $key)
+                    {
+                        $retValDict[$key] = true;
+                    }
+                }
+            }
+
+            $section = $this->getSection($sectionName);
+            if (! $section)
+            {
+                break;
+            }
+            
+            if (! $retVal)
+            {
+                $retVal = [];
+            }
+
+            foreach ($section as $key => $value)
+            {
+                if (! array_key_exists($key, $retValDict))
+                {
+                    array_push($retVal, $key);
+                }
+            }
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $retVal;
+}        
+
+// ****************
+
+public function getSectionKeysNonParentRecurse($sectionName) // Do not override. Override _protected_ variant instead
+{
+    logEntry(__METHOD__);
+
+    $retVal = null;
+
+    do
+    {
+        try
+        {
+            $retVal = $this->getSectionKeysNonParentRecurse_protected_($sectionName);
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $retVal;
+}        
+
+// ****************
+
+protected function getSectionKeysNonParentRecurse_protected_($sectionName) // Overrideable
+{
+    logEntry(__METHOD__);
+
+    $retVal = null;
+
+    do
+    {
+        try
+        {
+            if (! $sectionName || $sectionName == "")
+            {
+                logError(__METHOD__ . ": need $sectionName");
+                break;
+            }
+
+            $section = $this->getSection($sectionName);
+            if (! $section)
+            {
+                break;
+            }
+            
+            $retVal = [];
+            foreach ($section as $iniKey)
+            {
+                array_push($retVal, $iniKey);
+            }
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $retVal;
+}        
+
+// ****************
+
+public function getSectionNames() // Do not override. Override _protected_ variant instead
+{
+    logEntry(__METHOD__);
+
+    $retVal = null;
+
+    do
+    {
+        try
+        {
+            $retVal = $this->getSectionNames_protected_();
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $retVal;
+}        
+
+// ****************
+
+protected function getSectionNames_protected_() // Overrideable
+{
+    logEntry(__METHOD__);
+
+    $retVal = null;
+
+    do
+    {
+        try
+        {
+            if (! $this->sections)
+            {
+                break;
+            }
+
+            $retVal = [];
+            foreach ($this->sections as $sectionName => $content)
+            {
+                array_push($retVal, $sectionName);
+            }
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $retVal;
+}        
+
+// ****************
+
+public function getValue($sectionName, $iniKey, $defaultValue = null) // Do not override. Override _protected_ variant instead
+{
+    logEntry(__METHOD__);
+
+    $value = null;
+    do
+    {
+        try
+        {
+            $value = $this->getValueRecurseParents_protected_($sectionName, $iniKey, $defaultValue);
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $value;
+}        
+
+// ****************
+
+protected function getValue_protected_($sectionName, $iniKey, $defaultValue) // Overrideable
+{
+    logEntry(__METHOD__);
+
+    $value = $defaultValue;
+    
+    do
+    {
+        try
+        {
+            $section = $this->getSection($sectionName);
+            if (! $section)
+            {
+                break;
+            }
+            if (! $this->caseSensitive)
+            {
+                $iniKey = strtolower($iniKey);
+            }
+
+            if (array_key_exists($iniKey, $section))
+            {
+                $value = $section[$iniKey];
+            }
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $value;
+}        
+
+// ****************
+
+protected function getValueRecurseParents_protected_($sectionName, $iniKey, $defaultValue) // Overrideable
+{
+    logEntry(__METHOD__);
+
+    $value = null;
+    
+    do
+    {
+        try
+        {
+            $value = $this->getValue_protected_($sectionName, $iniKey, null);
+        
+            if ($value === null)
+            {
+                $parent = $this->parent;
+                if (! $parent)
+                {
+                    $value = $defaultValue;
+                }
+                else
+                {
+                    $value = $parent->getValueRecurseParents_protected_($sectionName, $iniKey, $defaultValue);
+                }
+            }
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $value;
+}        
+
+// ****************
+
+public function getValueNonParentRecurse($sectionName, $iniKey, $defaultValue = null) // Do not override. Override _protected_ variant instead
+{
+    logEntry(__METHOD__);
+
+    $value = null;
+    do
+    {
+        try
+        {
+            $value = $this->getValue_protected_($sectionName, $iniKey, $defaultValue);
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $value;
+}        
+
+// ****************
+
+public function isEmpty()
+{
+    logEntry(__METHOD__);
+
+    $isEmpty = true;
+    do
+    {
+        try
+        {
+            if (! $this->sections)
+            {
+                break;
+            }
+
+            foreach ($this->sections as $sectionName => $section)
+            {
+                foreach ($section as $iniKey)
+                {
+                    $isEmpty = false;
+                    break;
+                }
+                if (! $isEmpty)
+                {
+                    break;
+                }
+            }
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $isEmpty;
+}        
+
+// ****************
+
+public function makeDirty()
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        try
+        {
+            $this->dirty = true;
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+}        
+
+// ****************
+
+private function parse($iniString)
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        try
+        {
+            if (! $this->sections)
+            {
+                $this->sections = [];
+            }
+
+            $iniString = preg_split("/(\r\n|\n|\r)/",$iniString);
+
+            $sectionName = self::kIniSection_Main;
+            $suffix = null;
+            foreach ($iniString as $rawIniLine)
+            {
+                do
+                {
+                    $iniLine = Utils::trim($rawIniLine);
+                    $iniLineStart = substr($iniLine, 0, 1);
+                    if ($iniLineStart == "#" || $iniLineStart == ";") // comment
+                    {
+                        break;
+                    }
+
+                    if ($iniLine == "++")
+                    {
+                        if (! $suffix)
+                        {
+                            $suffix = 1;
+                        }
+                        else
+                        {
+                            $suffix++;
+                        }
+                        break;
+                    }
+
+                    $iniLineEnd = substr($iniLine, -1, 1);
+                    if ($iniLineStart == "[" && $iniLineEnd == "]") // section name
+                    {
+                        $sectionName = substr($iniLine, 1, strlen($iniLine) - 2);
+                        if (! $this->caseSensitive)
+                        {
+                            $sectionName = strtolower($sectionName);
+                        }
+                        $suffix = null;
+                        break;
+                    }
+
+                    $iniLineSplit = preg_split("/=/", $iniLine);
+                    if (count($iniLineSplit) < 2)
+                    {
+                        break;
+                    }
+                    
+                    $iniKey = Utils::despace($iniLineSplit[0]);
+                    if ($iniKey == "")
+                    {
+                        break;
+                    }
+
+                    if (! $this->caseSensitive)
+                    {
+                        $iniKey = strtolower($iniKey);
+                    }
+
+                    if ($suffix)
+                    {
+                        $iniKey .= $suffix;
+                    }
+
+                    $value = Utils::trim(substr($iniLine,strlen($iniLineSplit[0]) + 1));
+                    if (strlen($value) >= 2 && substr($value,0,1) == "\"" && substr($value, -1, 1) == "\"")
+                    {
+                        $value = stripcslashes(substr($value,1,strlen($value)-2));
+                    }
+                    
+                    if ($this->getValueNonParentRecurse($sectionName, $iniKey))
+                    {
+                        Logging.logError(__METHOD__ . ": duplicate iniKey " . $iniKey . " in section [" . $sectionName . "]");
+                    }
+
+                    $this->setValue($sectionName, $iniKey, $value);
+                }
+                while (false);
+            }
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+}        
+
+// ****************
+
+public function save() // Do not override. Override _protected_ variant instead
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        try
+        {
+            $this->save_protected_();
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+}        
+
+// ****************
+
+protected function save_protected_() // Overrideable
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        try
+        {
+            this.clearDirty();
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+}        
+
+// ****************
+
+public function setBooleanValue($sectionName, $iniKey, $value)
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        try
+        {
+            if ($value === null)
+            {
+                $this->setValue($sectionName, $iniKey, "N");
+            }
+            else
+            {
+                $this->setValue($sectionName, $iniKey, $value ? "Y" : "N");
+            }
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+}        
+
+// ****************
+
+public function setFloatValue($sectionName, $iniKey, $value)
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        try
+        {
+            if ($value === null)
+            {
+                $this->setValue($sectionName, $iniKey, $value);
+            }
+            else
+            {
+                $this.setValue($sectionName, $iniKey, "" + $value);
+            }
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+}        
+
+// ****************
+
+public function setFileValue($sectionName, $iniKey, $value)
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        try
+        {
+            if ($value === null)
+            {
+                $this->setValue(sectionName, iniKey, value);
+            }
+            {
+                $this->setValue(sectionName, iniKey, value + "");
+            }
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+}        
+
+// ****************
+
+public function setIntValue($sectionName, $iniKey, $value)
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        try
+        {
+            if (value === null)
+            {
+                this.setValue(sectionName, iniKey, value);
+            }
+            else
+            {
+                this.setValue(sectionName, iniKey, value + "");
+            }
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+}        
+
+// ****************
+
+function setIniString($iniString)
+{
+    logEntry(__METHOD__);
+    
+    do
+    {
+        try
+        {
+            if ($iniString)
+            {
+                $this->parse($iniString);
+                $this->clearDirty();
+            }
+            else
+            {
+                $this->clear();
+            }
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);        
+}
+
+// ****************
+
+public function setValue($sectionName, $iniKey, $value)
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        try
+        {
+            if (! $sectionName || $sectionName == "")
+            {
+                logError(__METHOD__ . ": needs $sectionName");
+                break;
+            }
+
+            $section = &$this->getSection($sectionName);
+            if (! $section)
+            {
+                if (! $this->sections)
+                {
+                    $this->sections = [];
+                }
+
+                if (! $this->caseSensitive)
+                {
+                    $sectionName = strtolower($sectionName);
+                }
+
+                $section = [];
+                $this->sections[$sectionName] = &$section;
+            }
+
+            if (! $this->caseSensitive)
+            {
+                $iniKey = strtolower($iniKey);
+            }
+
+            if ($value !== null)
+            {
+                if (! array_key_exists($iniKey, $section) || $section[$iniKey] != $value)
+                {
+                    $this->makeDirty();
+                    $section[$iniKey] = $value;
+                }
+            }
+            else if (array_key_exists($iniKey, $section))
+            {
+                $this->makeDirty();
+                unset($section[$iniKey]);
+            }
+
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+   }
+    while (false);
+
+    logExit(__METHOD__);        
+}        
+
+// ****************
+
+public function toString()
+{
+    logEntry(__METHOD__);
+
+    $iniString = "";
+    do
+    {
+        try
+        {
+            $iniString = $this->getIniString();
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);        
+
+    return $iniString;
+}        
+
+// ****************
+
+}
+
+class IniFile extends Ini
+{
+private $file = null;
+    
+protected function __construct($defaults = null) 
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        try 
+        {
+            parent::__construct($defaults);
+            if (! $defaults)
+            {
+                $this->error = true;
+                break;
+            }
+
+            if (! property_exists($defaults, "file") || ! $defaults->file)
+            {
+                $this->error = true;
+                break;
+            }
+
+            $this->setFile($defaults->file);        
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+            $this->error = true;
+        }
+    }
+    while (false);          
+
+    logExit(__METHOD__);
+}
+
+// ****************
+
+public static function factory($defaults)
+{
+    logEntry(__METHOD__);
+
+    try
+    {
+        $retVal = new IniFile($defaults);
+        if ($retVal->error)
+        {
+            $retVal = null;
+        }
+    }
+    catch (Exception $exception)
+    {
+        logError(__METHOD__ . ": throws " + $exception->getMessage());
+        $retVal = null;
+    }
+
+    logExit(__METHOD__);
+
+    return $retVal; 
+}
+
+// ****************
+
+public function appendAndSetFile($file)
+{
+    logEntry(__METHOD__);
+
+    $this->setFile($file, true);
+
+    logExit(__METHOD__);
+}        
+
+// ****************
+
+private function appendFile()
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        try
+        {
+            $iniFileString = $this->readFileAsString();
+            $this->setIniString($iniFileString);
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+}        
+
+// ****************
+
+private function readFile()
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        try
+        {
+            $this->clear();
+            $this->appendFile();
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+}        
+
+// ****************
+
+private function readFileAsString()
+{
+    logEntry(__METHOD__);
+
+    $iniFileString = "";
+    do
+    {
+        try
+        {
+            $file = $this->file;
+            if (! $file)
+            {
+                break;
+            }
+
+            if (! file_exists($file))
+            {
+                break;
+            }
+
+            $iniFileString = file_get_contents($file);
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $iniFileString;
+}        
+
+// ****************
+
+protected function save_protected_()
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        try
+        {
+            $dirty = $this->getDirty();
+            if (! $dirty)
+            {
+                break;
+            }
+
+            $file = $this->file;
+            if (! $file)
+            {
+                logError(__METHOD__ . ": needs \$this->file");
+                break;
+            }
+            
+            file_put_contents($file, $this->getIniString());
+
+            parent::save_protected_();
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+    
+}        
+
+// ****************
+
+protected function getFileValue_protected($sectionName, $iniKey, $defaultValue)
+{
+    logEntry(__METHOD__);
+
+    $value = null;
+    do
+    {
+        try
+        {
+            $value = $this->getFileValueNonParentRecurse($sectionName, $iniKey, null);
+            if ($value !== null)
+            {
+                break;
+            }
+
+            $parent = this.getParent();
+            if (! $parent)
+            {
+                $value = $defaultValue;
+            }
+            else
+            {
+                $value = $parent->getFileValue($sectionName, $iniKey, $defaultValue);
+            }                
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $value;
+}        
+
+// ****************
+
+function getFileValueNonParentRecurse($sectionName, $iniKey, $defaultValue = null) // Do not override. Override _protected_ variant instead
+{
+    logEntry(__METHOD__);
+
+    $value = null;
+    
+    do
+    {
+        try
+        {
+            $value = $this->getFileValueNonParentRecurse_protected_($sectionName, $iniKey, $defaultValue);
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $value;
+}        
+
+// ****************
+
+protected function getFileValueNonParentRecurse_protected_($sectionName, $iniKey, $defaultValue) // Overrideable
+{
+    logEntry(__METHOD__);
+
+    $value = null;
+    
+    do
+    {
+        try
+        {
+            $value = $this->getValueNonParentRecurse($sectionName, $iniKey, $defaultValue);
+            if (! $value)
+            {
+                $value = $defaultValue;
+                break;
+            }
+
+            if (strncmp($value, "..", 2) == 0)
+            {
+                $value = dirname($this->file) + "/" + value;
+            }
+            else if (strncmp($value, ".", 1) == 0)
+            {
+                $value = dirname($this->file) + substr($value,1);
+            }
+
+            $value = realpath($value);
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+
+    return $value;
+}        
+
+// ****************
+
+public function setFile($file) // Overrides default setter
+{
+    logEntry(__METHOD__);
+
+    $this->setFile_private_($file);
+
+    logExit(__METHOD__);
+}        
+
+// ****************
+
+private function setFile_private_($file, $append = false)
+{
+    logEntry(__METHOD__);
+
+    do
+    {
+        try
+        {
+            if (! $file)
+            {
+                break;
+            }
+        
+            $file = realpath($file);
+            if ($this->file)
+            {
+                if ($file == $this->file)
+                {
+                    break;
+                }
+            }
+
+            $this->file = $file;
+            if (! $append) 
+            {
+                $this->clear();
+            }
+            $this->appendFile();
+        }
+        catch (Exception $exception)
+        {
+            logError(__METHOD__ . ": throws " + $exception->getMessage());
+        }
+    }
+    while (false);
+
+    logExit(__METHOD__);
+}        
+/// ****************
 
 }
 
@@ -257,14 +2242,14 @@ define("JSON_PARSE_STATE_SEEN_DOUBLE_QUOTE_ESCAPE",  8);
 
 function commented_json_decode($in_json) {
 
-    logEntry("commented_json_decode");
+    logEntry(__METHOD__);
 
     do { // non-loop
 
         try {
 
             if (! $in_json) {
-                logNote("commented_json_decode: no in_json");
+                logNote(__METHOD__ . ": no in_json");
                 break;
             }
 
@@ -374,18 +2359,18 @@ function commented_json_decode($in_json) {
                 }
             }
 
-            logNote("commented_json_decode: decoded = \n" . $decoded_json);
+            logNote(__METHOD__ . ": decoded = \n" . $decoded_json);
 
             $retVal = $decoded_json;
 
         }
         catch (Exception $e) {
-            logError("commented_json_decode: throws " . $e->getMessage());
+            logError(__METHOD__ . ": throws " . $e->getMessage());
         }
     }
     while (false); // non-loop
 
-    logExit("commented_json_decode");
+    logExit(__METHOD__);
 
     return $retVal;
 }
@@ -417,6 +2402,8 @@ function defaultConfig() {
     $config["logToFile"]                = false; // File path or false
     $config["logToConsole"]             = true;  // true or false
     $config["ignoreDOMParserErrors"]    = true;
+    $config["parseAsXML"]               = true;
+    $config["parseAsHTML"]              = true;
 
     return $config;
 }
@@ -446,12 +2433,12 @@ function init($droppedFile, $optionalEPUBFile) {
             $LOG_ENTRY_EXIT = $config["logEntryExit"];
 
             $localConfigFile = nearbyConfigFile($droppedFile);
-            logNote("attempt to load optional local config " . $localConfigFile);
+            logNote(__METHOD__ . ": attempt to load optional local config " . $localConfigFile);
             mergeConfig($config, $localConfigFile);
 
             if (isset($optionalEPUBFile)) {
                 $epubConfigFile = nearbyConfigFile($optionalEPUBFile);
-                logNote("attempt to load optional epub-local config " . $epubConfigFile);
+                logNote(__METHOD__ . ": attempt to load optional epub-local config " . $epubConfigFile);
                 mergeConfig($config, $epubConfigFile);
             }
 
@@ -483,7 +2470,7 @@ function isAcceptedFile($config, $filePath) {
 
     $retVal = false;
 
-    logEntry("isAcceptedFile");
+    logEntry(__METHOD__);
 
     do { // non-loop
         try {
@@ -493,13 +2480,25 @@ function isAcceptedFile($config, $filePath) {
 
             $extension = "";
             if ($numPieces <= 1) {
-                logWarning("isAcceptedFile: no file name extension for " . $filePath);
+                logWarning(__METHOD__ . ": no file name extension for " . $filePath);
                 break;
             }
 
             $extension = strtolower($fileNamePieces[$numPieces - 1]);
 
-            foreach ($config["acceptFileNameExtensions"] as $fileNameExtension) {
+            $fileNameExtensions = $config["acceptFileNameExtensions"];
+            if ($config["format"] == "INI") {
+                if (! is_array($fileNameExtensions)) {
+                    $rawFileNameExtensions = preg_split("/,/", $fileNameExtensions);
+                    $fileNameExtensions = [];
+                    foreach ($rawFileNameExtensions as $rawFileNameExtension) {
+                        $fileNameExtension = trim($rawFileNameExtension);
+                        $fileNameExtensions[] = $fileNameExtension;
+                    }
+                }
+            }
+
+            foreach ($fileNameExtensions as $fileNameExtension) {
                 $compareExtension = strtolower($fileNameExtension);
                 if ($extension == $compareExtension) {
                     $retVal = true;
@@ -508,12 +2507,12 @@ function isAcceptedFile($config, $filePath) {
             }
         }
         catch (Exception $e) {
-            logError("isAcceptedFile: throws " . $e->getMessage());
+            logError(__METHOD__ . ": throws " . $e->getMessage());
         }
     }
     while (false); // non-loop
 
-    logExit("isAcceptedFile");
+    logExit(__METHOD__);
 
     return $retVal;
 }
@@ -586,7 +2585,7 @@ function logWarning($message) {
 
 function makeBackup($config, $filePath) {
 
-    logEntry("makeBackup");
+    logEntry(__METHOD__);
 
     //
     // If maxBackupCount = 1
@@ -619,7 +2618,7 @@ function makeBackup($config, $filePath) {
                     // Only one backup file allowed and it already exists.
                     // Retain the backup as-is. We'll overwrite $filePath
                     $backupFile = "";
-                    logNote("makeBackup: retaining previous backup. No backup made");
+                    logNote(__METHOD__ . ": retaining previous backup. No backup made");
                 }
                 else {
                     $backupCount = $maxBackupCount;
@@ -630,7 +2629,7 @@ function makeBackup($config, $filePath) {
                         if (file_exists($backupFile)) {
                             if (! $previousBackupFile) {
                                 unlink($backupFile);
-                                logNote("makeBackup: removing oldest backup " . $backupFile);
+                                logNote(__METHOD__ . ": removing oldest backup " . $backupFile);
                             }
                             else {
                                 rename($backupFile, $previousBackupFile);
@@ -647,54 +2646,97 @@ function makeBackup($config, $filePath) {
 
             copy($filePath, $backupFile);
 
-            logNote("makeBackup: backup made to " . $backupFile);
+            logNote(__METHOD__ . ": backup made to " . $backupFile);
         }
         catch (Exception $e) {
-            logError("makeBackup: throws " . $e->getMessage());
+            logError(__METHOD__ . ": throws " . $e->getMessage());
         }
     }
     while (false); // non-loop
 
-    logExit("makeBackup");
+    logExit(__METHOD__);
 }
 
 function mergeConfig(&$config, $filePath) {
 
-    logEntry("mergeConfig");
+    logEntry(__METHOD__);
 
     do { // non-loop
 
         try {
 
-            $mergeConfigJSON = readFileContents($filePath);
-            if (! $mergeConfigJSON) {
-                logNote("mergeConfig: no data retrieved from " . $filePath);
+            $mergeConfigTXT = readFileContents($filePath);
+            if (! $mergeConfigTXT) {
+                if (file_exists($filePath)) {
+                    logNote(__METHOD__ . ": no data retrieved from " . $filePath);
+                }
                 break;
             }
 
-            $mergeConfigJSON = commented_json_decode($mergeConfigJSON);
-
-            $mergeConfig = json_decode($mergeConfigJSON);
-            if (isset($mergeConfig)) {
-                foreach ($mergeConfig as $key => $value) {
-                    logNote("mergeConfig: merging [" . $key . "] = \"" . $value . "\"");
-                    $config[$key] = $value;
+            if (preg_match("/^\\s*{\\$/", $mergeConfigTXT) == 1) {
+                $mergeConfigJSON = $mergeConfigTXT;
+                $mergeConfigJSON = commented_json_decode($mergeConfigJSON);
+                $mergeConfig = json_decode($mergeConfigJSON);
+                if (isset($mergeConfig)) {
+                    foreach ($mergeConfig as $key => $value) {
+                        logNote(__METHOD__ . ": merging [" . $key . "] = \"" . $value . "\"");
+                        $config[$key] = $value;
+                    }
                 }
+                $config["format"] = "JSON";
             }
+            else {
+                $defaults = new stdClass();
+                $defaults->iniString = $mergeConfigTXT;
+                $defaults->caseSensitive = true;
+                $mergeConfig = Ini::factory($defaults);
+                if (isset($mergeConfig)) {
+                    $keys = $mergeConfig->getSectionKeys("main");
+                    foreach ($keys as $key) {
+                        $value = $mergeConfig->getValue("main", $key);
+                        logNote(__METHOD__ . ": merging [" . $key . "] = \"" . $value . "\"");
+                        $config[$key] = $value;
+                    }
+
+                    $sectionNames = $mergeConfig->getSectionNames();
+                    foreach ($sectionNames as $sectionName) {
+                        if ($sectionName != "main") {
+                            $config[$sectionName] = [];
+                            $section = &$config[$sectionName];
+                            $keys = $mergeConfig->getSectionKeys($sectionName);
+                            foreach ($keys as $key) {
+                                $rootKey = preg_replace("/(.*[^\d])\d+/", "$1", $key);
+                                $keyIdx = substr($key, strlen($rootKey));
+                                if ($keyIdx == "") {
+                                    $keyIdx = 0;
+                                }
+                                $value = $mergeConfig->getValue($sectionName, $key);
+                                if (! isset($section[$keyIdx])) {
+                                    $section[$keyIdx] = new stdClass();
+                                }
+                                $entry = &$section[$keyIdx];
+                                $entry->{$rootKey} = $value;
+                            }
+                        }
+                    }
+                }
+                $config["format"] = "INI";
+            }
+
         }
         catch (Exception $e) {
-            logError("mergeConfig: throws " . $e->getMessage());
+            logError(__METHOD__ . ": throws " . $e->getMessage());
         }
     }
     while (false); // non-loop
 
-    logExit("mergeConfig");
+    logExit(__METHOD__);
 
 }
 
 function nearbyConfigFile($filePath) {
 
-    logEntry("nearbyConfigFile");
+    logEntry(__METHOD__);
 
     do { // non-loop
 
@@ -706,12 +2748,12 @@ function nearbyConfigFile($filePath) {
 
         }
         catch (Exception $e) {
-            logError("nearbyConfigFile: throws " . $e->getMessage());
+            logError(__METHOD__ . ": throws " . $e->getMessage());
         }
     }
     while (false); // non-loop
 
-    logExit("nearbyConfigFile");
+    logExit(__METHOD__);
 
     return $configFileName;
 }
@@ -720,26 +2762,26 @@ function readFileContents($filePath) {
 
     $retVal = "";
 
-    logEntry("readFileContents");
+    logEntry(__METHOD__);
  
     do { // non-loop
 
         try {
 
             if (! file_exists($filePath)) {
-                logNote("readFileContents: file does not exist " . $filePath);
+                logNote(__METHOD__ . ": file does not exist " . $filePath);
                 break;
             }
 
             $retVal = file_get_contents($filePath);
         }
         catch (Exception $e) {
-            logError("readFileContents: throws " . $e->getMessage());
+            logError(__METHOD__ . ": throws " . $e->getMessage());
         }
     }
     while (false); // non-loop
 
-    logExit("readFileContents");
+    logExit(__METHOD__);
 
     return $retVal;
 }
@@ -748,7 +2790,7 @@ function stripFileNameExtension($fileOrFilePath) {
 
     $retVal = $fileOrFilePath;
 
-    logEntry("stripFileNameExtension");
+    logEntry(__METHOD__);
 
     do { // non-loop
 
@@ -773,12 +2815,12 @@ function stripFileNameExtension($fileOrFilePath) {
 
         }
         catch (Exception $e) {
-            logError("stripFileNameExtension: throws " . $e->getMessage());
+            logError(__METHOD__ . ": throws " . $e->getMessage());
         }
     }
     while (false); // non-loop
 
-    logExit("stripFileNameExtension");
+    logExit(__METHOD__);
 
     return $retVal;
 
@@ -786,7 +2828,7 @@ function stripFileNameExtension($fileOrFilePath) {
 
 function writeFileContents($filePath, $content) {
 
-    logEntry("writeFileContents");
+    logEntry(__METHOD__);
 
     do { // non-loop
 
@@ -794,7 +2836,7 @@ function writeFileContents($filePath, $content) {
 
             $outFile = fopen($filePath, "w");
             if (! $outFile) {
-                logWarning("writeFileContents: cannot open file for writing " . $filePath);
+                logWarning(__METHOD__ . ": cannot open file for writing " . $filePath);
                 break;
             }
 
@@ -802,12 +2844,12 @@ function writeFileContents($filePath, $content) {
             fclose($outFile);
         }
         catch (Exception $e) {
-            logError("writeFileContents: throws " . $e->getMessage());
+            logError(__METHOD__ . ": throws " . $e->getMessage());
         }
     }
     while (false); // non-loop
 
-    logExit("writeFileContents");
+    logExit(__METHOD__);
 
 }
 
