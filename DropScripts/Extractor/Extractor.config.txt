@@ -1,66 +1,69 @@
-{
-    "acceptFileNameExtensions": [ "html", "htm", "xhtml" ],
-    "extractions": [
-        {
-//
-// Pattern with div, nested div, nested p, nested span
-//
-// Example:
-//
-// <div id="_idContainer083" class="Basic-Text-Frame">
-//    <div style="width:6060px;height:160px;position:absolute;top:0px;left:0px;-webkit-transform-origin: 0% 0%; -webkit-transform: translate(0px,2.63px) rotate(0deg) scale(0.05);transform-origin: 0% 0%; transform: translate(0px,2.63px) rotate(0deg) scale(0.05);">
-//        <p class="VRH ParaOverride-1"><span id="_idTextSpan9142" class="CharOverride-4" style="position:absolute;top:7.75px;left:0px;">xxx</span></p>
-//    </div>
-// </div>
-//      
-            "patternFrom": "/<div id=\"[^\"]*\" class=\"Basic-Text-Frame\"[^>]*>[ \\r\\n\\s]*<div[^>]*>[ \\r\\n\\s]*<p class=\"(Basic-Paragraph|VRH|RRH)[^>]*>[ \\r\\n\\s]*<span[^>]*>[ \\r\\n\\s]*(\\d+|[ivxclm]+)[ \\r\\n\\s]*<\\/span>[ \\r\\n\\s]*<\\/p>[ \\r\\n\\s]*<\\/div>[ \\r\\n\\s]*<\\/div>/",
-            "patternTo": "\\t\\t\\t<li><a href=\"$fileName#$2\">$2</a></li>",
-            "outputFileNameExtension": "txt"
-        },
-        {
-//
-// Pattern with div, nested p, nested span
-//
-// Example:
-//
-//  <div style="width:6060px;height:160px;position:absolute;top:0px;left:0px;-webkit-transform-origin: 0% 0%; -webkit-transform: translate(0px,2.63px) rotate(0deg) scale(0.05);transform-origin: 0% 0%; transform: translate(0px,2.63px) rotate(0deg) scale(0.05);">
-//      <p class="VRH ParaOverride-1"><span id="_idTextSpan9142" class="CharOverride-4" style="position:absolute;top:7.75px;left:0px;">xxx</span></p>
-// </div>
-//      
-            "patternFrom": "/<div id=\"[^\"]*\" class=\"Basic-Text-Frame\"[^>]*>[ \\r\\n\\s]*<p class=\"(Basic-Paragraph|VRH|RRH)[^>]*>[ \\r\\n\\s]*<span[^>]*>[ \\r\\n\\s]*(\\d+|[ivxclm]+)[ \\r\\n\\s]*<\\/span>[ \\r\\n\\s]*<\\/p>[ \\r\\n\\s]*<\\/div>/",
-            "patternTo": "\\t\\t\\t<li><a href=\"$fileName#$2\">$2</a></li>",
-            "outputFileNameExtension": "txt"
-        },
-        {
-//
-// Pattern with div, nested div, nested p
-//
-// Example:
-//
-// <div id="_idContainer083" class="Basic-Text-Frame">
-//    <div style="width:6060px;height:160px;position:absolute;top:0px;left:0px;-webkit-transform-origin: 0% 0%; -webkit-transform: translate(0px,2.63px) rotate(0deg) scale(0.05);transform-origin: 0% 0%; transform: translate(0px,2.63px) rotate(0deg) scale(0.05);">
-//        <p class="VRH ParaOverride-1">xxx</p>
-//    </div>
-// </div>
-//      
-            "patternFrom": "/<div id=\"[^\"]*\" class=\"Basic-Text-Frame\"[^>]*>[ \\r\\n\\s]*<div[^>]*>[ \\r\\n\\s]*<p class=\"(Basic-Paragraph|VRH|RRH)[^>]*>(\\d+|[ivxclm]+)<\\/p>[ \\r\\n\\s]*<\\/div>[ \\r\\n\\s]*<\\/div>/",
-            "patternTo": "\\t\\t\\t<li><a href=\"$fileName#$2\">$2</a></li>",
-            "outputFileNameExtension": "txt"
-        },
-        {
-//
-// Pattern with div, nested p
-//
-// Example:
-//
-//  <div style="width:6060px;height:160px;position:absolute;top:0px;left:0px;-webkit-transform-origin: 0% 0%; -webkit-transform: translate(0px,2.63px) rotate(0deg) scale(0.05);transform-origin: 0% 0%; transform: translate(0px,2.63px) rotate(0deg) scale(0.05);">
-//      <p class="VRH ParaOverride-1">xxx</p>
-// </div>
-//      
-            "patternFrom": "/<div id=\"[^\"]*\" class=\"Basic-Text-Frame\"[^>]*>[ \\r\\n\\s]*<p class=\"(Basic-Paragraph|VRH|RRH)[^>]*>(\\d+|[ivxclm]+)<\\/p>[ \\r\\n\\s]*<\\/div>/",
-            "patternTo": "\\t\\t\\t<li><a href=\"$fileName#$2\">$2</a></li>",
-            "outputFileNameExtension": "txt"
-        }
-    ]
+acceptFileNameExtensions = html, htm, xhtml
 
-}
+[extractions]
+
+#
+# Pattern with div, nested div, nested p, nested span
+#
+# Example:
+#
+# <div id="_idContainer083" class="Basic-Text-Frame">
+#    <div style="width:6060px;height:160px;position:absolute;top:0px;left:0px;-webkit-transform-origin: 0% 0%; -webkit-transform: translate(0px,2.63px) rotate(0deg) scale(0.05);transform-origin: 0% 0%; transform: translate(0px,2.63px) rotate(0deg) scale(0.05);">
+#        <p class="VRH ParaOverride-1"><span id="_idTextSpan9142" class="CharOverride-4" style="position:absolute;top:7.75px;left:0px;">xxx</span></p>
+#    </div>
+# </div>
+#
+
+patternFrom = <div id="[^"]*" class="Basic-Text-Frame"[^>]*>[ \r\n\s]*<div[^>]*>[ \r\n\s]*<p class="(Basic-Paragraph|VRH|RRH)[^>]*>[ \r\n\s]*<span[^>]*>[ \r\n\s]*(\d+|[ivxclm]+)[ \r\n\s]*</span>[ \r\n\s]*</p>[ \r\n\s]*</div>[ \r\n\s]*</div>
+patternTo = \t\t\t<li><a href="$fileName#$2">$2</a></li>
+outputFileNameExtension = txt
+
+++
+
+#
+# Pattern with div, nested p, nested span
+#
+# Example:
+#
+# <div id="_idContainer083" class="Basic-Text-Frame">
+#      <p class="VRH ParaOverride-1"><span id="_idTextSpan9142" class="CharOverride-4" style="position:absolute;top:7.75px;left:0px;">xxx</span></p>
+# </div>
+#      
+
+patternFrom = <div id="[^"]*" class="Basic-Text-Frame"[^>]*>[ \r\n\s]*<p class="(Basic-Paragraph|VRH|RRH)[^>]*>[ \r\n\s]*<span[^>]*>[ \r\n\s]*(\d+|[ivxclm]+)[ \r\n\s]*</span>[ \r\n\s]*</p>[ \r\n\s]*</div>
+patternTo = \t\t\t<li><a href="$fileName#$2">$2</a></li>
+outputFileNameExtension = txt
+
+++
+
+#
+# Pattern with div, nested div, nested p
+#
+# Example:
+#
+# <div id="_idContainer083" class="Basic-Text-Frame">
+#    <div style="width:6060px;height:160px;position:absolute;top:0px;left:0px;-webkit-transform-origin: 0% 0%; -webkit-transform: translate(0px,2.63px) rotate(0deg) scale(0.05);transform-origin: 0% 0%; transform: translate(0px,2.63px) rotate(0deg) scale(0.05);">
+#        <p class="VRH ParaOverride-1">xxx</p>
+#    </div>
+# </div>
+#      
+
+patternFrom = <div id="[^"]*" class="Basic-Text-Frame"[^>]*>[ \r\n\s]*<div[^>]*>[ \r\n\s]*<p class="(Basic-Paragraph|VRH|RRH)[^>]*>(\d+|[ivxclm]+)</p>[ \r\n\s]*</div>[ \r\n\s]*</div>
+patternTo = \t\t\t<li><a href="$fileName#$2">$2</a></li>
+outputFileNameExtension = txt
+
+++
+
+#
+# Pattern with div, nested p
+#
+# Example:
+#
+# <div id="_idContainer083" class="Basic-Text-Frame">
+#      <p class="VRH ParaOverride-1">xxx</p>
+# </div>
+#
+ 
+patternFrom = <div id="[^"]*" class="Basic-Text-Frame"[^>]*>[ \r\n\s]*<p class="(Basic-Paragraph|VRH|RRH)[^>]*>(\d+|[ivxclm]+)</p>[ \r\n\s]*</div>
+patternTo = \t\t\t<li><a href="$fileName#$2">$2</a></li>
+outputFileNameExtension = txt

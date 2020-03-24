@@ -1,5 +1,4 @@
-{
-	"forcedReplaceTitle":     1,
-	"keepTitleSubtags":       1,
-	"addSpaceBetweenSubTags": 1
-}
+forcedReplaceTitle     = 1
+keepTitleSubtags       = 1
+addSpaceBetweenSubTags = 1
+ignoreDOMParserErrors  = 0
