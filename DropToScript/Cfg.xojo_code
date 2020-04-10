@@ -3,6 +3,9 @@ Protected Class Cfg
 	#tag Constant, Name = COMPANY_FOLDER_NAME, Type = String, Dynamic = False, Default = \"ca.nnels.a11y.publishing.droptoscript", Scope = Public
 	#tag EndConstant
 
+	#tag Constant, Name = DELETE_TEMP_DIR, Type = Boolean, Dynamic = False, Default = \"true", Scope = Public
+	#tag EndConstant
+
 	#tag Constant, Name = DISABLE_COMPILER_RUNTIME_CHECKS, Type = Boolean, Dynamic = False, Default = \"false", Scope = Public
 	#tag EndConstant
 
@@ -27,6 +30,9 @@ Protected Class Cfg
 	#tag Constant, Name = MAX_FILE_NAME_EXTENSION_LEN, Type = Double, Dynamic = False, Default = \"10", Scope = Public
 	#tag EndConstant
 
+	#tag Constant, Name = OUTPUTPREFIX, Type = String, Dynamic = False, Default = \">!>:", Scope = Public
+	#tag EndConstant
+
 	#tag Constant, Name = SCRIPT_FILENAME_EXTENSION_LISTS, Type = String, Dynamic = False, Default = \".php.py.command.bat.", Scope = Public
 	#tag EndConstant
 
@@ -36,7 +42,9 @@ Protected Class Cfg
 			Name="Name"
 			Visible=true
 			Group="ID"
+			InitialValue=""
 			Type="String"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Index"
@@ -44,12 +52,15 @@ Protected Class Cfg
 			Group="ID"
 			InitialValue="-2147483648"
 			Type="Integer"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Super"
 			Visible=true
 			Group="ID"
+			InitialValue=""
 			Type="String"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Left"
@@ -57,6 +68,7 @@ Protected Class Cfg
 			Group="Position"
 			InitialValue="0"
 			Type="Integer"
+			EditorType=""
 		#tag EndViewProperty
 		#tag ViewProperty
 			Name="Top"
@@ -64,6 +76,7 @@ Protected Class Cfg
 			Group="Position"
 			InitialValue="0"
 			Type="Integer"
+			EditorType=""
 		#tag EndViewProperty
 	#tag EndViewBehavior
 End Class

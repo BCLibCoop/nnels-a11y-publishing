@@ -1082,7 +1082,7 @@ private function &getSection($sectionName)
         {
             if (! $sectionName || $sectionName == "")
             {
-                Logging.logError(__METHOD__ . ": needs $sectionName");
+                logError(__METHOD__ . ": needs $sectionName");
                 break;
             }
 
@@ -1533,7 +1533,9 @@ private function parse($iniString)
                 $this->sections = [];
             }
 
-            $iniString = preg_split("/(\r\n|\n|\r)/",$iniString);
+            $iniString = preg_split("/(\015\012|\015|\012)/",$iniString);
+
+            logNote(__METHOD__ . ': $iniString = ' . $iniString);
 
             $sectionName = self::kIniSection_Main;
             $suffix = null;
@@ -1603,10 +1605,12 @@ private function parse($iniString)
                     
                     if ($this->getValueNonParentRecurse($sectionName, $iniKey))
                     {
-                        Logging.logError(__METHOD__ . ": duplicate iniKey " . $iniKey . " in section [" . $sectionName . "]");
+                        logError(__METHOD__ . ": duplicate iniKey " . $iniKey . " in section [" . $sectionName . "]");
                     }
 
                     $this->setValue($sectionName, $iniKey, $value);
+                    logError(__METHOD__ . ": duplicate iniKey " . $iniKey . " in section [" . $sectionName . "]");
+
                 }
                 while (false);
             }
@@ -2403,11 +2407,11 @@ function commented_json_decode($in_json) {
     return $retVal;
 }
 
-define("LOG_NONE",    0);
-define("LOG_ERROR",   1);
-define("LOG_WARNING", 2);
-define("LOG_NOTE",    3);
-define("LOG_TRACE",   4);
+define("LOG_LEVEL_NONE",    0);
+define("LOG_LEVEL_ERROR",   1);
+define("LOG_LEVEL_WARNING", 2);
+define("LOG_LEVEL_NOTE",    3);
+define("LOG_LEVEL_TRACE",   4);
 
 function defaultConfig() {
 
@@ -2425,13 +2429,14 @@ function defaultConfig() {
     $config["defaultXMLHeader"]         = "<?xml version=\"1.0\" encoding=\"utf-8\"?>";
     $config["defaultHTMLheader"]        = "<html xmlns:epub=\"http://www.idpf.org/2007/ops\" xmlns=\"http://www.w3.org/1999/xhtml\">";
     $config["maxBackupCount"]           = 5;
-    $config["logLevel"]                 = LOG_NONE;
+    $config["logLevel"]                 = LOG_LEVEL_NONE;
     $config["logEntryExit"]             = false;
     $config["logToFile"]                = false; // File path or false
     $config["logToConsole"]             = true;  // true or false
     $config["ignoreDOMParserErrors"]    = true;
     $config["parseAsXML"]               = true;
     $config["parseAsHTML"]              = true;
+    $config["format"]                   = "BUILTIN";
 
     return $config;
 }
@@ -2459,6 +2464,8 @@ function init($droppedFile, $optionalEPUBFile) {
             $LOG_TO_FILE = $config["logToFile"];
             $LOG_TO_CONSOLE = $config["logToConsole"];
             $LOG_ENTRY_EXIT = $config["logEntryExit"];
+
+            logNote(__METHOD__ . ": has loaded global config " . $globalConfigFile);
 
             $localConfigFile = nearbyConfigFile($droppedFile);
             logNote(__METHOD__ . ": attempt to load optional local config " . $localConfigFile);
@@ -2556,7 +2563,7 @@ function logEntry($function) {
 function logError($message) {
     global $LOGLEVEL;
 
-    if ($LOGLEVEL >= LOG_ERROR) {
+    if ($LOGLEVEL >= LOG_LEVEL_ERROR) {
         logMessage("ERROR: " . $message);
     }
 }
@@ -2590,7 +2597,7 @@ function logMessage($message) {
 function logNote($message) {
     global $LOGLEVEL;
 
-    if ($LOGLEVEL >= LOG_NOTE) {
+    if ($LOGLEVEL >= LOG_LEVEL_NOTE) {
         logMessage("NOTE : " . $message);
     }
 }
@@ -2598,7 +2605,7 @@ function logNote($message) {
 function logTrace($message) {
     global $LOGLEVEL;
 
-    if ($LOGLEVEL >= LOG_TRACE) {
+    if ($LOGLEVEL >= LOG_LEVEL_TRACE) {
         logMessage("TRACE: " . $message);
     }
 }
@@ -2606,7 +2613,7 @@ function logTrace($message) {
 function logWarning($message) {
     global $LOGLEVEL;
 
-    if ($LOGLEVEL >= LOG_WARNING) {
+    if ($LOGLEVEL >= LOG_LEVEL_WARNING) {
         logMessage("WARN : " . $message);
     }
 }
@@ -2712,44 +2719,44 @@ function mergeConfig(&$config, $filePath) {
                     }
                 }
                 $config["format"] = "JSON";
+                break;
             }
-            else {
-                $defaults = new stdClass();
-                $defaults->iniString = $mergeConfigTXT;
-                $defaults->caseSensitive = true;
-                $mergeConfig = Ini::factory($defaults);
-                if (isset($mergeConfig)) {
-                    $keys = $mergeConfig->getSectionKeys("main");
-                    foreach ($keys as $key) {
-                        $value = $mergeConfig->getValue("main", $key);
-                        logNote(__METHOD__ . ": merging [" . $key . "] = \"" . $value . "\"");
-                        $config[$key] = $value;
-                    }
+            
+            $defaults = new stdClass();
+            $defaults->iniString = $mergeConfigTXT;
+            $defaults->caseSensitive = true;
+            $mergeConfig = Ini::factory($defaults);
+            if (isset($mergeConfig)) {
+                $keys = $mergeConfig->getSectionKeys("main");
+                foreach ($keys as $key) {
+                    $value = $mergeConfig->getValue("main", $key);
+                    logNote(__METHOD__ . ": merging [" . $key . "] = \"" . $value . "\"");
+                    $config[$key] = $value;
+                }
 
-                    $sectionNames = $mergeConfig->getSectionNames();
-                    foreach ($sectionNames as $sectionName) {
-                        if ($sectionName != "main") {
-                            $config[$sectionName] = [];
-                            $section = &$config[$sectionName];
-                            $keys = $mergeConfig->getSectionKeys($sectionName);
-                            foreach ($keys as $key) {
-                                $rootKey = preg_replace("/(.*[^\d])\d+/", "$1", $key);
-                                $keyIdx = substr($key, strlen($rootKey));
-                                if ($keyIdx == "") {
-                                    $keyIdx = 0;
-                                }
-                                $value = $mergeConfig->getValue($sectionName, $key);
-                                if (! isset($section[$keyIdx])) {
-                                    $section[$keyIdx] = new stdClass();
-                                }
-                                $entry = &$section[$keyIdx];
-                                $entry->{$rootKey} = $value;
+                $sectionNames = $mergeConfig->getSectionNames();
+                foreach ($sectionNames as $sectionName) {
+                    if ($sectionName != "main") {
+                        $config[$sectionName] = [];
+                        $section = &$config[$sectionName];
+                        $keys = $mergeConfig->getSectionKeys($sectionName);
+                        foreach ($keys as $key) {
+                            $rootKey = preg_replace("/(.*[^\d])\d+/", "$1", $key);
+                            $keyIdx = substr($key, strlen($rootKey));
+                            if ($keyIdx == "") {
+                                $keyIdx = 0;
                             }
+                            $value = $mergeConfig->getValue($sectionName, $key);
+                            if (! isset($section[$keyIdx])) {
+                                $section[$keyIdx] = new stdClass();
+                            }
+                            $entry = &$section[$keyIdx];
+                            $entry->{$rootKey} = $value;
                         }
                     }
                 }
-                $config["format"] = "INI";
             }
+            $config["format"] = "INI";
 
         }
         catch (Exception $e) {

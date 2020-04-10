@@ -1177,7 +1177,11 @@ Inherits Application
 		      
 		      if not changed then
 		        Log.LogNote CurrentMethodName, "nothing was changed"
-		        success = DeleteFolder(fTemporaryDecompressedEPUB) = 0
+		        if Cfg.DELETE_TEMP_DIR then
+		          success = DeleteFolder(fTemporaryDecompressedEPUB) = 0
+		        else 
+		          success = true
+		        end if
 		        fTemporaryDecompressedEPUB = nil
 		        Exit
 		      end if
@@ -1220,11 +1224,13 @@ Inherits Application
 		        Exit
 		      end if
 		      
-		      if fTemporaryDecompressedEPUB.Directory then
-		        Dim lastErr as Integer
-		        lastErr = DeleteFolder(fTemporaryDecompressedEPUB)
-		      else
-		        fTemporaryDecompressedEPUB.Delete
+		      if Cfg.DELETE_TEMP_DIR then
+		        if fTemporaryDecompressedEPUB.Directory then
+		          Dim lastErr as Integer
+		          lastErr = DeleteFolder(fTemporaryDecompressedEPUB)
+		        else
+		          fTemporaryDecompressedEPUB.Delete
+		        end if
 		      end if
 		      
 		    Catch e As RuntimeException
@@ -1319,19 +1325,65 @@ Inherits Application
 		      
 		      #if TargetWindows
 		        
+		        Dim isCygwin as Boolean
+		        isCygwin = scriptInterpreterPath.IndexOf("cygwin") >= 1
+		        if isCygwin then
+		          Log.LogTrace CurrentMethodName, scriptInterpreterPath + " looks like a cygwin program"
+		        else
+		          Log.LogTrace CurrentMethodName, scriptInterpreterPath + " does not look like a cygwin program"
+		        end if
+		        
 		        // Shellpaths are shortened. Mix up a shortened parent dir path with an unshortened file name
 		        
 		        Dim parentFolderShellPath as String
 		        parentFolderShellPath = in_file.Parent.ShellPath
+		        
+		        Dim shellPath as String
+		        shellPath = fSelectedScript.Parent.ShellPath + "\" + fSelectedScript.Name
+		        
+		        Static re as RegEx
+		        Dim separator as String
+		        if not isCygwin then
+		          
+		          separator = "\"
+		          
+		        else
+		          
+		          separator = "/"
+		          
+		          if re = nil then
+		            re = new RegEx
+		            re.SearchPattern = "^([A-Za-z]):/"
+		            re.ReplacementPattern = "/cygdrive/$1/"
+		            re.Options.CaseSensitive = false
+		          end if
+		          
+		          shellPath = shellPath.ReplaceAll("\", separator)
+		          shellPath = re.Replace(shellPath)
+		          
+		          parentFolderShellPath = parentFolderShellPath.ReplaceAll("\", separator)
+		          parentFolderShellPath = re.Replace(parentFolderShellPath)
+		          
+		        end if
 		        
 		        if in_optionalEPUBFile <> nil then
 		          
 		          Dim epubParentFolderShellPath as String
 		          epubParentFolderShellPath = in_optionalEPUBFile.Parent.ShellPath
 		          
-		          commandLine = """" + scriptInterpreterPath + """ " + fSelectedScript.ShellPath + " """ + parentFolderShellPath + "\" + in_file.Name + """" + " """ + epubParentFolderShellPath + "\" + in_optionalEPUBFile.Name + """"
+		          if isCygwin then
+		            
+		            epubParentFolderShellPath = epubParentFolderShellPath.ReplaceAll("\", separator)
+		            epubParentFolderShellPath = re.Replace(epubParentFolderShellPath)
+		            
+		          end if
+		          
+		          commandLine = """" + scriptInterpreterPath + """ " + shellPath + " """ + parentFolderShellPath + separator + in_file.Name + """" + " """ + epubParentFolderShellPath + separator + in_optionalEPUBFile.Name + """"
+		          
 		        else
-		          commandLine = """" + scriptInterpreterPath + """ " + fSelectedScript.ShellPath + " """ + parentFolderShellPath + "\" + in_file.Name + """"
+		          
+		          commandLine = """" + scriptInterpreterPath + """ " + shellPath + " """ + parentFolderShellPath + separator + in_file.Name + """"
+		          
 		        end if
 		        
 		      #else
@@ -1370,8 +1422,8 @@ Inherits Application
 		        for idx as integer = 0 to UBound(outputLines)
 		          Dim line as String
 		          line = outputLines(idx)
-		          if Left(line, Len(OUTPUTPREFIX)) = OUTPUTPREFIX then
-		            AddToScriptOutput Mid(line, Len(OUTPUTPREFIX) + 1)
+		          if Left(line, Len(Cfg.OUTPUTPREFIX)) = Cfg.OUTPUTPREFIX then
+		            AddToScriptOutput Mid(line, Len(Cfg.OUTPUTPREFIX) + 1)
 		          else
 		            Log.LogNote line
 		          end if
@@ -1832,9 +1884,6 @@ Inherits Application
 	#tag Constant, Name = kFileQuitShortcut, Type = String, Dynamic = False, Default = \"", Scope = Public
 		#Tag Instance, Platform = Mac OS, Language = Default, Definition  = \"Cmd+Q"
 		#Tag Instance, Platform = Linux, Language = Default, Definition  = \"Ctrl+Q"
-	#tag EndConstant
-
-	#tag Constant, Name = OUTPUTPREFIX, Type = String, Dynamic = False, Default = \">!>:", Scope = Public
 	#tag EndConstant
 
 

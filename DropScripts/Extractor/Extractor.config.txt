@@ -1,4 +1,6 @@
+
 acceptFileNameExtensions = html, htm, xhtml
+logLevel = 0
 
 [extractions]
 
