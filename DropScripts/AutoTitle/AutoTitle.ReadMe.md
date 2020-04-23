@@ -42,15 +42,13 @@ or override configuration options.
 
 The names of these options are case-sensitive.
 
-Make sure the various options are separated with commas: all option-containing lines should end in a comma, except for the last one.
-
 ### acceptFileNameExtensions
 
 Optional. The script will ignore any files whose file name does not end in one of the listed extensions
 
 The default when this is omitted is:
 
-    "acceptFileNameExtensions": [ "html", "htm", "xhtml" ]
+    acceptFileNameExtensions = html, htm, xhtml
 
 ### backupFileNameExtension
 
@@ -58,7 +56,7 @@ Optional. The file name extension to use for backup files
 
 The default when this is omitted is:
 
-    "backupFileNameExtension": "old"
+    backupFileNameExtension = old
 
 ### forcedReplaceTitle
 
@@ -67,7 +65,7 @@ as the HTML file name.
 
 The default when this is omitted is:
 
-    "forcedReplaceTitle": 0
+    forcedReplaceTitle = 0
 
 ### keepTitleSubtags
 
@@ -78,7 +76,7 @@ earlier on the title would become
 
 The default when this is omitted is:
 
-    "keepTitleSubtags": 0
+    keepTitleSubtags = 0
 
 ### logLevel
 
@@ -87,7 +85,7 @@ provided. Useful for diagnostics when the script does not seem to work correctly
 
 The default when this is omitted is:
 
-    "logLevel": 0
+    logLevel = 0
 
 ### maxBackupCount
 
@@ -95,7 +93,7 @@ Optional. How many backup files to keep.
 
 The default when this is omitted is:
 
-    "maxBackupCount": 5
+    maxBackupCount = 5
 
 If maxBackupCount is 0, no backups are made
 

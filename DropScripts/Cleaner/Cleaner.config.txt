@@ -1,19 +1,23 @@
-{
-	"replacements": [
-		{
-		  // Strip old headers
-			"from": "~(((\\s*<![^>]*>)|(\\s*<\\?[^>]*\\?>))+\\s*)~si",
-			"to": ""
-		},
-		{
-		  // Strip existing HTML tag
-			"from": "~<html[^>]*>([\\s\\S]*)</html>~si",
-			"to": "$1"
-		},
-		{
-		  // Add new HTML tag and new headers
-			"from": "~\\s*([\\s\\S]*\\S)\\s*~si",
-			"to": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n<html xmlns:epub=\"http://www.idpf.org/2007/ops\" xmlns=\"http://www.w3.org/1999/xhtml\">\n$1\n</html>"
-		}
-	]
-}
+acceptFileNameExtensions = html, htm, xhtml
+
+[replacements]
+
+# Strip old headers
+
+from = /(((\s*<![^>]*>)|(\s*<\?[^>]*\?>))+\s*)/si
+to = ""
+
+++
+
+# Strip existing HTML tag
+
+from = /<html[^>]*>([\s\S]*)<\/html>/si
+to = $1
+
+++
+
+# Add new HTML tag and new headers
+
+from = /\s*([\s\S]*\S)\s*/si
+to = <?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">\n<html xmlns:epub="http://www.idpf.org/2007/ops" xmlns="http://www.w3.org/1999/xhtml">\n$1\n</html>
+to_encodedNewLines = \n

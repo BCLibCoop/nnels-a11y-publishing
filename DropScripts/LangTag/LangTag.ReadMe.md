@@ -17,7 +17,11 @@ The names of these options are case-sensitive.
 
 ### attrsToMove
 
-List of attributes to move from body tag to html tag. Will normally include 2 names: lang, and xml:lang.
+List of attributes to move from body tag to html tag. Will normally include 2 names: lang, and xml:lang. 
+
+Example:
+
+    attrsToMove = lang, xml:lang
 
 ### acceptFileNameExtensions
 
@@ -25,7 +29,7 @@ Optional. The script will ignore any files whose file name does not end in one o
 
 The default when this is omitted is:
 
-    "acceptFileNameExtensions": [ "html", "htm", "xhtml" ]
+    acceptFileNameExtensions = html, htm, xhtml
 
 ### backupFileNameExtension
 
@@ -33,7 +37,7 @@ Optional. The file name extension to use for backup files
 
 The default when this is omitted is:
 
-    "backupFileNameExtension": "old"
+    backupFileNameExtension = old
 
 ### defaultIfMissing
 
@@ -51,7 +55,7 @@ provided. Useful for diagnostics when the script does not seem to work correctly
 
 The default when this is omitted is:
 
-    "logLevel": 0
+    logLevel = 0
 
 ### maxBackupCount
 
@@ -59,7 +63,7 @@ Optional. How many backup files to keep.
 
 The default when this is omitted is:
 
-    "maxBackupCount": 5
+    maxBackupCount = 5
 
 If maxBackupCount is 0, no backups are made
 

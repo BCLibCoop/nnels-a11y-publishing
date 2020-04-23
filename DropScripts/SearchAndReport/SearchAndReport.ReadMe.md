@@ -28,7 +28,7 @@ Optional. The script will ignore any files whose file name does not end in one o
 
 The default when this is omitted is:
 
-    "acceptFileNameExtensions": [ "html", "htm", "xhtml" ]
+    acceptFileNameExtensions = html, htm, xhtml
 
 ### backupFileNameExtension
 
@@ -36,7 +36,7 @@ Optional. The file name extension to use for backup files
 
 The default when this is omitted is:
 
-    "backupFileNameExtension": "old"
+    backupFileNameExtension = old
 
 ### logLevel
 
@@ -45,7 +45,7 @@ provided. Useful for diagnostics when the script does not seem to work correctly
 
 The default when this is omitted is:
 
-    "logLevel": 0
+    logLevel = 0
 
 ### maxBackupCount
 
@@ -53,7 +53,7 @@ Optional. How many backup files to keep.
 
 The default when this is omitted is:
 
-    "maxBackupCount": 5
+    maxBackupCount = 5
 
 If maxBackupCount is 0, no backups are made
 
@@ -73,29 +73,24 @@ first time.
 SomeFile.xhtml&lowbar;1.old, SomeFile.xhtml&lowbar;2.old... rotate. The &lowbar;1 file is the latest,
 the &lowbar;5 file is the oldest.
 
-### searchpatterns
+### [searchpatterns]
 
-Required. Provide an array of entries for find, then search-and-replace in order to generate
+After this section header one or more groups of entries
+for find, then search-and-replace in order to generate
 reported items.
 
-Each entry has a "match", a "convertMatchFrom" and a "convertMatchTo" string. Individual entries are separated by commas.
+Groups of entries are separated by lines with just a ++ on them
+ 
+Each entry has a "match", a "convertMatchFrom" and a "convertMatchTo" string.
 
-The "match" string is a PHP regular expression string, in JavaScript/JSON encoded
-fashion. This expresses what we're looking for.
+The "match" string is a PHP regular expression string. This expresses what we're looking for.
 
-The "convertMatchFrom" string a search string _within_ a match string. This allows us to extract some
+The "convertMatchFrom" string is a search string _within_ a match string. This allows us to extract some
 sub-string of the match.
 
 The "convertMatchTo" string a replacement string. This is what will end up in the report.
-
-All three strings are quoted and in JavaScript notation.
-
-That means that all double quotes need to be prefixed with a backslash \
-
-A new line character can be encoded as \n 
 
 See
 
 https://www.php.net/manual/en/reference.pcre.pattern.syntax.php
 
-https://json.org/

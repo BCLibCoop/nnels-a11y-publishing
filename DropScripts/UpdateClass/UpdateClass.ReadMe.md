@@ -22,6 +22,19 @@ or override configuration options.
 
 The names of these options are case-sensitive.
 
+Because the UpdateClass DropScript uses a list of lists, the UpdateClass.config.txt is
+using the JSON file format, instead of the simpler .INI file format.
+
+Any regular expressions in this file need to be quoted and escaped according to the JSON string encoding rules.
+
+E.g. if the regular expression were a string
+
+    a"b\cd
+  
+In the config file it will need to be changed to become
+
+    "a\"b\\cd"
+
 ### acceptFileNameExtensions
 
 Optional. The script will ignore any files whose file name does not end in one of the listed extensions

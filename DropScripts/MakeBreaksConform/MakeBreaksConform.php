@@ -2214,6 +2214,7 @@ private function setFile_private_($file, $append = false)
 
 }
 
+define("KEY_SUFFIX_NEWLINE_ENCODED_AS",              "_encodedNewLines");
 define("JSON_PARSE_STATE_IDLE",                      0);
 define("JSON_PARSE_STATE_SEEN_SLASH",                1);
 define("JSON_PARSE_STATE_SEEN_DOUBLE_SLASH",         2);
@@ -2274,7 +2275,7 @@ function commented_json_decode($in_json) {
                         }
                         else {
                             $decoded_json .= "/" . $c;
-                            $state = JSON_PARSE_STATE_IDLE;                            
+                            $state = JSON_PARSE_STATE_IDLE;
                         }
                     }
                     break;
@@ -2436,7 +2437,7 @@ function init($droppedFile, $optionalEPUBFile) {
             $LOG_TO_CONSOLE = $config["logToConsole"];
             $LOG_ENTRY_EXIT = $config["logEntryExit"];
 
-            $config["droppedFilePath"] = $droppedFile;            
+            $config["droppedFilePath"] = $droppedFile;
             $config["droppedFileName"] = basename($droppedFile);
             if ($optionalEPUBFile) {
                 $config["epubFilePath"] = $optionalEPUBFile;
@@ -2461,7 +2462,7 @@ function isAcceptedFile($config, $filePath) {
 
     do { // non-loop
         try {
-            
+
             $fileNamePieces = explode(".", basename($filePath));
             $numPieces = count($fileNamePieces);
 
@@ -2479,7 +2480,7 @@ function isAcceptedFile($config, $filePath) {
                     $rawFileNameExtensions = preg_split("/,/", $fileNameExtensions);
                     $fileNameExtensions = [];
                     foreach ($rawFileNameExtensions as $rawFileNameExtension) {
-                        $fileNameExtension = trim($rawFileNameExtension);
+                        $fileNameExtension = preg_replace("/\s*\"?(.*?)\"?\s*/", "$1", $rawFileNameExtension);
                         $fileNameExtensions[] = $fileNameExtension;
                     }
                 }
@@ -2576,18 +2577,18 @@ function makeBackup($config, $filePath) {
 
     //
     // If maxBackupCount = 1
-    //    if the backup file does not exist: 
+    //    if the backup file does not exist:
     //       move the original file to the backup file
-    //    if the backup file does exist: 
-    //       delete the original file so we can overwrite it. 
+    //    if the backup file does exist:
+    //       delete the original file so we can overwrite it.
     //       The existing backup is probably from a previous
     //       run of the script and should not be overwritten.
     //
     // If maxBackupCount > 1
-    //    if the backup file does not exist: 
+    //    if the backup file does not exist:
     //       move the original file to the backup file.
-    //    if the backup file does exist: 
-    //       Make a backup to backup_1.old, backup_2.old,... 
+    //    if the backup file does exist:
+    //       Make a backup to backup_1.old, backup_2.old,...
     //       Delete the oldest of these if there are too many
     //
 
@@ -2660,7 +2661,7 @@ function mergeConfig(&$config, $filePath) {
                 break;
             }
 
-            if (preg_match("/^\\s*{\\$/", $mergeConfigTXT) == 1) {
+            if (preg_match("/^\\s*{/", $mergeConfigTXT) > 0) {
                 $mergeConfigJSON = $mergeConfigTXT;
                 $mergeConfigJSON = commented_json_decode($mergeConfigJSON);
                 $mergeConfig = json_decode($mergeConfigJSON);
@@ -2673,17 +2674,19 @@ function mergeConfig(&$config, $filePath) {
                 $config["format"] = "JSON";
                 break;
             }
-            
+
             $defaults = new stdClass();
             $defaults->iniString = $mergeConfigTXT;
             $defaults->caseSensitive = true;
             $mergeConfig = Ini::factory($defaults);
             if (isset($mergeConfig)) {
                 $keys = $mergeConfig->getSectionKeys("main");
-                foreach ($keys as $key) {
-                    $value = $mergeConfig->getValue("main", $key);
-                    logNote(__METHOD__ . ": merging [" . $key . "] = \"" . $value . "\"");
-                    $config[$key] = $value;
+                if (isset($keys)) {
+                    foreach ($keys as $key) {
+                        $value = $mergeConfig->getValue("main", $key);
+                        logNote(__METHOD__ . ": merging [" . $key . "] = \"" . $value . "\"");
+                        $config[$key] = $value;
+                    }
                 }
 
                 $sectionNames = $mergeConfig->getSectionNames();
@@ -2692,18 +2695,27 @@ function mergeConfig(&$config, $filePath) {
                         $config[$sectionName] = [];
                         $section = &$config[$sectionName];
                         $keys = $mergeConfig->getSectionKeys($sectionName);
-                        foreach ($keys as $key) {
-                            $rootKey = preg_replace("/(.*[^\d])\d+/", "$1", $key);
-                            $keyIdx = substr($key, strlen($rootKey));
-                            if ($keyIdx == "") {
-                                $keyIdx = 0;
+                        if (isset($keys)) {
+                            foreach ($keys as $key) {
+                                $rootKey = preg_replace("/(.*[^\d])\d+/", "$1", $key);
+                                if (substr($rootKey, -strlen(KEY_SUFFIX_NEWLINE_ENCODED_AS)) != KEY_SUFFIX_NEWLINE_ENCODED_AS) {
+                                    $keyIdx = substr($key, strlen($rootKey));
+                                    if ($keyIdx == "") {
+                                        $keyIdx = 0;
+                                    }
+                                    $newlineEncodedAsKey = $rootKey . KEY_SUFFIX_NEWLINE_ENCODED_AS . $keyIdx;
+                                    $newLineEncodedAs = $mergeConfig->getValue($sectionName, $newlineEncodedAsKey);
+                                    $value = $mergeConfig->getValue($sectionName, $key);
+                                    if (isset($newLineEncodedAs)) {
+                                        $value = str_replace($newLineEncodedAs, "\n", $value);
+                                    }
+                                    if (! isset($section[$keyIdx])) {
+                                        $section[$keyIdx] = new stdClass();
+                                    }
+                                    $entry = &$section[$keyIdx];
+                                    $entry->{$rootKey} = $value;
+                                }
                             }
-                            $value = $mergeConfig->getValue($sectionName, $key);
-                            if (! isset($section[$keyIdx])) {
-                                $section[$keyIdx] = new stdClass();
-                            }
-                            $entry = &$section[$keyIdx];
-                            $entry->{$rootKey} = $value;
                         }
                     }
                 }

@@ -22,11 +22,12 @@ Optional. The script will ignore any files whose file name does not end in one o
 
 The default when this is omitted is:
 
-    "acceptFileNameExtensions": [ "html", "htm", "xhtml" ]
+    acceptFileNameExtensions = html, htm, xhtml
 
 ### extractions
 
-A list between `[]` of one or more JSON objects (each between `{}`). Each JSON object contains three attributes: 
+A list of one or more groups of entries, separated by lines with just ++ on them.
+ 
 ```
 patternFrom
 patternTo
@@ -36,7 +37,7 @@ outputFileNameExtension
 When processing single files (.xhtml, .html) the output file is a same-name file
 with a file name extension as defined by outputFileNameExtension. 
 
-E.g. if `"outputFileNameExtension": "txt"`, then processing
+E.g. if `outputFileNameExtension = txt`, then processing
 ```
 Page1.xhtml
 ```
@@ -70,11 +71,11 @@ If an input myfile.xhtml file contains:
 ```   
 and the Extractor.config.txt file has a JSON object:
 ```
-{
-    "patternFrom": "/<div id=\"[^\"]*\" class=\"Basic-Text-Frame\"[^>]*>[ \\r\\n\\s]*<div[^>]*>[ \\r\\n\\s]*<p class=\"(Basic-Paragraph|VRH|RRH)[^>]*>[ \\r\\n\\s]*<span[^>]*>[ \\r\\n\\s]*(\\d+|[ivxclm]+)[ \\r\\n\\s]*<\\/span>[ \\r\\n\\s]*<\\/p>[ \\r\\n\\s]*<\\/div>[ \\r\\n\\s]*<\\/div>/",
-    "patternTo": "\\t\\t\\t<li><a href=\"$fileName#$2\">$2</a></li>",
-    "outputFileNameExtension": "txt"
-}
+patternFrom = /<div id="[^"]*" class="Basic-Text-Frame"[^>]*>[ \r\n\s]*<div[^>]*>[ \r\n\s]*<p class="(Basic-Paragraph|VRH|RRH)[^>]*>[ \r\n\s]*<span[^>]*>[ \r\n\s]*(\d+|[ivxclm]+)[ \r\n\s]*<\/span>[ \r\n\s]*<\\/p>[ \r\n\s]*<\/div>[ \r\n\s]*<\/div>/
+patternTo = \t\t\t<li><a href="$fileName#$2">$2</a></li>
+outputFileNameExtension = txt
+
+++
 ```
 then we'll have a match. The matching parenthesized GREP subpatterns are `$1` = `VRH`, `$2` = `123`.
 
@@ -82,9 +83,8 @@ We then take `patternTo`, and replace `$2` with `123`, and `$filename` with `myf
 ```
             <li><a href="myfile.xhtml#123">123</a></li>
 ```
-Because we need to store the GREP pattern as a JSON string, pay attention to the escaping that's needed. 
 
-The actual GREP expression:
+Constructing the GREP expression:
 ```
 <div id="[^"]*" class="Basic-Text-Frame"[^>]*>[ \r\n\s]*<div[^>]*>[ \r\n\s]*<p class="(Basic-Paragraph|VRH|RRH)[^>]*>[ \r\n\s]*<span[^>]*>[ \r\n\s]*(\d+|[ivxclm]+)[ \r\n\s]*</span>[ \r\n\s]*</p>[ \r\n\s]*</div>[ \r\n\s]*</div>
 ```
@@ -100,7 +100,7 @@ Split up over multiple lines for readability:
   </div>[ \r\n\s]*
 </div>
 ```
-Step 1: Encoding for PHP: we escape any forward slashes inside the GREP expression (i.e. `/` becomes `\/`), then put the GREP expression between two forward slashes. Do not change the order of these operations. 
+We need to encode for PHP: we escape any forward slashes inside the GREP expression (i.e. `/` becomes `\/`), then put the GREP expression between two forward slashes. Do not change the order of these operations. 
 ```
 /<div id="[^"]*" class="Basic-Text-Frame"[^>]*>[ \r\n\s]*
   <div[^>]*>[ \r\n\s]*
@@ -112,21 +112,9 @@ Step 1: Encoding for PHP: we escape any forward slashes inside the GREP expressi
   <\/div>[ \r\n\s]*
 <\/div>/
 ```
-Step 2: Encoding for JSON: we replace all backslashes by double-backslashes (`\` to `\\`), then prefix all double quotes with a backslash (`"` to `\"`), then we enclose the string in double quotes. Do not change the order of these operations.
-```
-"/<div id=\"[^\"]*\" class=\"Basic-Text-Frame\"[^>]*>[ \\r\\n\\s]*
-  <div[^>]*>[ \\r\\n\\s]*
-    <p class=\"(Basic-Paragraph|VRH|RRH)[^>]*>[ \\r\\n\\s]*
-      <span[^>]*>[ \\r\\n\\s]*
-        (\\d+|[ivxclm]+)[ \\r\\n\\s]*
-      <\\/span>[ \\r\\n\\s]*
-    <\\/p>[ \\r\\n\\s]*
-  <\\/div>[ \\r\\n\\s]*
-<\\/div>/"
-```
 As one long line:
 ```
-"/<div id=\"[^\"]*\" class=\"Basic-Text-Frame\"[^>]*>[ \\r\\n\\s]*<div[^>]*>[ \\r\\n\\s]*<p class=\"(Basic-Paragraph|VRH|RRH)[^>]*>[ \\r\\n\\s]*<span[^>]*>[ \\r\\n\\s]*(\\d+|[ivxclm]+)[ \\r\\n\\s]*<\\/span>[ \\r\\n\\s]*<\\/p>[ \\r\\n\\s]*<\\/div>[ \\r\\n\\s]*<\\/div>/"
+/<div id="[^"]*" class="Basic-Text-Frame"[^>]*>[ \r\n\s]*<div[^>]*>[ \r\n\s]*<p class="(Basic-Paragraph|VRH|RRH)[^>]*>[ \r\n\s]*<span[^>]*>[ \r\n\s]*(\d+|[ivxclm]+)[ \r\n\s]*<\/span>[ \r\n\s]*<\\/p>[ \r\n\s]*<\/div>[ \r\n\s]*<\/div>/
 ```
 This gives us the string for `patternFrom`
 
@@ -137,4 +125,4 @@ provided. Useful for diagnostics when the script does not seem to work correctly
 
 The default when this is omitted is:
 
-    "logLevel": 0
+    logLevel = 0
