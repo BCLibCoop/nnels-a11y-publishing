@@ -105,7 +105,22 @@ function getNodeText($config, $node) {
         try {
 
             if (! $config["keepTitleSubtags"]) {
-                $retVal = $node->textContent;
+
+                foreach ($node->childNodes as $childNode) {
+
+                    if ($childNode->nodeType == XML_TEXT_NODE) {
+                        $addContent = $childNode->textContent;
+                        if (isset($addContent) && $addContent != "") {
+                            if ($config["addSpaceBetweenSubTags"]) {
+                                if ($retVal) {
+                                    $retVal .= " ";
+                                }
+                            }
+                            $retVal .= $addContent;
+                        }
+                    }
+                }
+
                 break;
             }
             
